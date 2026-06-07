@@ -238,7 +238,7 @@ async function capturePopup(port, outPath) {
 }
 
 function browserFrameHtml() {
-  const popupImage = `data:image/png;base64,${readFileSync(path.join(outputDir, 'read-it-later-popup.png')).toString('base64')}`;
+  const popupImage = `data:image/png;base64,${readFileSync(path.join(outputDir, 'popup-with-entries.png')).toString('base64')}`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -442,8 +442,7 @@ async function main() {
 
   try {
     await waitForChrome(port);
-    await capturePopup(port, path.join(outputDir, 'read-it-later-popup.png'));
-    await captureHtml(port, browserFrameHtml(), path.join(outputDir, 'read-it-later-browser.png'));
+    await capturePopup(port, path.join(outputDir, 'popup-with-entries.png'));
   } finally {
     chrome.kill();
     await delay(200);
