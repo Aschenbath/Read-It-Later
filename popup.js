@@ -13,7 +13,8 @@ const state = {
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
   selectedIds: new Set(),
-  showCreateGroup: false
+  showCreateGroup: false,
+  viewMode: 'grouped' // 'grouped' or 'flat'
 };
 
 const els = {};
@@ -97,6 +98,12 @@ function exitSelectionMode() {
   state.selectedIds.clear();
   state.showCreateGroup = false;
   document.body.classList.remove('selection-mode');
+  render();
+}
+
+function toggleViewMode() {
+  state.viewMode = state.viewMode === 'grouped' ? 'flat' : 'grouped';
+  document.body.classList.toggle('flat-view', state.viewMode === 'flat');
   render();
 }
 
@@ -658,14 +665,21 @@ function render() {
   const visible = ReadLaterCore.filterEntries(ReadLaterCore.sortEntriesForDisplay(state.entries), state.query);
   state.visibleEntries = visible;
 
-  const groups = ReadLaterCore.groupEntriesByDomain(visible);
-  const elements = groups.map(group => {
-    if (group.type === 'single') {
-      return renderEntry(group.entry);
-    } else {
-      return renderDomainGroup(group);
-    }
-  });
+  let elements;
+  if (state.viewMode === 'flat') {
+    // Flat view: render all entries directly without grouping
+    elements = visible.map(entry => renderEntry(entry));
+  } else {
+    // Grouped view: group by domain
+    const groups = ReadLaterCore.groupEntriesByDomain(visible);
+    elements = groups.map(group => {
+      if (group.type === 'single') {
+        return renderEntry(group.entry);
+      } else {
+        return renderDomainGroup(group);
+      }
+    });
+  }
 
   // Insert "Create new group" item at the top in selection mode
   if (state.selectionMode && state.showCreateGroup && state.selectedIds.size > 0) {
@@ -775,6 +789,7 @@ function bind() {
       setSearch('');
     }
   });
+  els.viewModeBtn.addEventListener('click', toggleViewMode);
   els.searchInput.addEventListener('input', () => {
     state.query = els.searchInput.value;
     render();
@@ -830,6 +845,7 @@ function init() {
   els.emptyCopy = byId('emptyCopy');
   els.searchInput = byId('searchInput');
   els.clearSearchBtn = byId('clearSearchBtn');
+  els.viewModeBtn = byId('viewModeBtn');
   els.entriesList = byId('entriesList');
   els.emptyState = byId('emptyState');
   els.emptyTitle = byId('emptyTitle');
