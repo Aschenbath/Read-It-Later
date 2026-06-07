@@ -115,7 +115,6 @@ async function createGroupFromSelection() {
   }
 
   const trimmedName = groupName.trim();
-  const selectedEntries = state.entries.filter(e => state.selectedIds.has(e.id));
 
   // Update domain for selected entries
   const updatedEntries = state.entries.map(entry => {
@@ -222,19 +221,6 @@ function renderEntry(entry) {
   item.classList.toggle('is-current-tab', !!state.currentTabEntry && state.currentTabEntry.id === entry.id);
   item.classList.toggle('is-read', !!entry.isRead);
   item.classList.toggle('is-selected', state.selectedIds.has(entry.id));
-
-  // Selection mode checkbox
-  if (state.selectionMode) {
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.className = 'entry-checkbox';
-    checkbox.checked = state.selectedIds.has(entry.id);
-    checkbox.addEventListener('change', (e) => {
-      e.stopPropagation();
-      toggleSelection(entry.id);
-    });
-    item.appendChild(checkbox);
-  }
 
   const openButton = document.createElement('button');
   openButton.className = 'entry-open-button';
@@ -506,13 +492,32 @@ function renderEmptyState(visible) {
 }
 
 function renderAddButtonState() {
-  const isSaved = !!state.currentTabEntry;
-  els.addCurrentPageBtn.classList.toggle('is-saved', isSaved);
-  els.addCurrentPageBtn.title = isSaved ? 'Current page is saved' : 'Add current page';
-  els.addCurrentPageBtn.setAttribute(
-    'aria-label',
-    isSaved ? 'Current page is already saved' : 'Add current page'
-  );
+  if (state.selectionMode) {
+    // In selection mode, button becomes "Create Group"
+    els.addCurrentPageBtn.classList.remove('is-saved');
+    els.addCurrentPageBtn.classList.add('is-selection-mode');
+    els.addCurrentPageBtn.title = state.selectedIds.size > 0
+      ? `Create group from ${state.selectedIds.size} selected`
+      : 'Select entries to create group';
+    els.addCurrentPageBtn.setAttribute(
+      'aria-label',
+      state.selectedIds.size > 0
+        ? `Create group from ${state.selectedIds.size} selected entries`
+        : 'Select entries to create group'
+    );
+    els.addCurrentPageBtn.disabled = state.selectedIds.size === 0;
+  } else {
+    // Normal mode
+    els.addCurrentPageBtn.classList.remove('is-selection-mode');
+    els.addCurrentPageBtn.disabled = false;
+    const isSaved = !!state.currentTabEntry;
+    els.addCurrentPageBtn.classList.toggle('is-saved', isSaved);
+    els.addCurrentPageBtn.title = isSaved ? 'Current page is saved' : 'Add current page';
+    els.addCurrentPageBtn.setAttribute(
+      'aria-label',
+      isSaved ? 'Current page is already saved' : 'Add current page'
+    );
+  }
 }
 
 function render() {
@@ -533,18 +538,20 @@ function render() {
   renderEmptyState(visible);
   renderAddButtonState();
   els.clearSearchBtn.classList.toggle('hidden', !state.query);
-
-  // Update selection toolbar
-  if (state.selectionMode) {
-    els.selectionToolbar.classList.remove('hidden');
-    els.selectionCount.textContent = `${state.selectedIds.size} selected`;
-    els.createGroupBtn.disabled = state.selectedIds.size === 0;
+  if (state.query) {
+    setStatus(`${visible.length} matched`);
   } else {
-    els.selectionToolbar.classList.add('hidden');
+    setStatus('');
   }
 }
 
 async function addCurrentPage() {
+  // In selection mode, create group instead
+  if (state.selectionMode) {
+    await createGroupFromSelection();
+    return;
+  }
+
   if (state.busy) return;
   state.busy = true;
   els.addCurrentPageBtn.disabled = true;
@@ -618,8 +625,6 @@ function bind() {
     state.query = els.searchInput.value;
     render();
   });
-  els.cancelSelectionBtn.addEventListener('click', exitSelectionMode);
-  els.createGroupBtn.addEventListener('click', createGroupFromSelection);
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       if (state.selectionMode) {
@@ -675,10 +680,6 @@ function init() {
   els.emptyState = byId('emptyState');
   els.emptyTitle = byId('emptyTitle');
   els.statusText = byId('statusText');
-  els.selectionToolbar = byId('selectionToolbar');
-  els.cancelSelectionBtn = byId('cancelSelectionBtn');
-  els.createGroupBtn = byId('createGroupBtn');
-  els.selectionCount = byId('selectionCount');
   bind();
   loadEntries().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not load list');

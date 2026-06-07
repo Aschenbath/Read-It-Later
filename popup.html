@@ -25,7 +25,7 @@
 
     <label class="search-wrap" for="searchInput">
       <span class="search-icon" aria-hidden="true"></span>
-      <input id="searchInput" type="search" placeholder="Find what you meant to read..." autocomplete="off" spellcheck="false">
+      <input id="searchInput" type="search" placeholder="Find what you meant to read... (@domain to filter)" autocomplete="off" spellcheck="false">
       <button id="clearSearchBtn" class="search-clear-button hidden" type="button" title="Clear search" aria-label="Clear search">
         <span aria-hidden="true"></span>
       </button>
@@ -40,12 +40,6 @@
         <button id="emptyActionBtn" class="empty-action-button" type="button" data-action="add">Save current page</button>
       </div>
     </section>
-
-    <div id="selectionToolbar" class="selection-toolbar hidden">
-      <button id="cancelSelectionBtn" class="selection-toolbar-btn" type="button">Cancel</button>
-      <span id="selectionCount" class="selection-count">0 selected</span>
-      <button id="createGroupBtn" class="selection-toolbar-btn selection-toolbar-btn-primary" type="button">Create Group</button>
-    </div>
 
     <footer class="status-row">
       <p id="statusText" class="status-text" role="status"></p>
