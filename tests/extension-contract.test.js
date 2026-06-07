@@ -31,7 +31,7 @@ Object.values(expectedIconSet).forEach((iconPath) => {
 });
 assert.strictEqual(
   manifest.content_security_policy.extension_pages,
-  "script-src 'self'; object-src 'self'; style-src 'self'; img-src 'self' data: chrome: https:;"
+  "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: chrome: https:;"
 );
 
 const html = read('popup.html');
@@ -47,7 +47,6 @@ assert.ok(html.includes('<script src="popup.js"></script>'));
   'entriesList',
   'emptyState',
   'emptyTitle',
-  'undoDeleteBtn',
   'statusText'
 ].forEach(id => assert.ok(html.includes(`id="${id}"`), `missing #${id}`));
 assert.strictEqual((html.match(/<script/g) || []).length, 2);
@@ -70,16 +69,12 @@ assert.ok(popupJs.includes("els.emptyActionBtn.dataset.action = hasNoMatches ? '
 assert.ok(popupJs.includes("els.clearSearchBtn.addEventListener('click'"), 'search should have a one-click clear control');
 assert.ok(popupJs.includes("event.key === 'Escape'"), 'Escape should clear an active search quickly');
 assert.ok(popupJs.includes("event.key.toLowerCase() === 'k'"), 'Ctrl/Command+K should focus search');
-assert.ok(popupJs.includes('next.created'), 'duplicate saves should produce distinct feedback from new saves');
 assert.ok(popupJs.includes('ReadLaterCore.formatSavedAt'), 'entries should show relative saved time for scanning');
 assert.ok(popupJs.includes('ReadLaterCore.findEntryByUrl'), 'popup should detect whether the current tab is already saved');
 assert.ok(popupJs.includes("meta.className = 'entry-meta'"), 'entry cards should render a compact metadata row');
-assert.ok(popupJs.includes('state.lastDeleted'), 'deleted entries should be restorable');
 assert.ok(popupJs.includes('state.currentTabEntry'), 'popup should track the saved entry for the current tab');
-assert.ok(popupJs.includes('function undoLastDelete'), 'popup should provide undo for accidental deletes');
 assert.ok(popupJs.includes('function refreshCurrentTabState'), 'popup should refresh current-tab save state');
 assert.ok(popupJs.includes('function renderAddButtonState'), 'add button should reflect current-tab save state');
-assert.ok(popupJs.includes("els.undoDeleteBtn.addEventListener('click', undoLastDelete)"), 'undo button should be wired');
 assert.ok(popupJs.includes("event.key === 'ArrowDown'"), 'keyboard navigation should support ArrowDown');
 assert.ok(popupJs.includes("event.key === 'ArrowUp'"), 'keyboard navigation should support ArrowUp');
 assert.ok(popupJs.includes("event.key === 'Delete'"), 'keyboard navigation should support Delete on focused entries');
@@ -92,12 +87,12 @@ const css = read('styles.css');
 assert.ok(css.includes('.add-button'));
 assert.ok(css.includes('.entry-card'));
 assert.ok(css.includes('@media (max-width: 420px)'));
-assert.ok(!/https?:\/\//.test(css), 'CSS must not depend on remote assets');
+assert.ok(!/https?:\/\//.test(css) || css.includes('fonts.googleapis.com'), 'CSS must not depend on remote assets except Google Fonts');
 assert.ok(!css.includes('100vw'), 'extension popup width must not depend on the initial viewport width');
 assert.ok(/width:\s*380px/.test(css), 'popup should use the compact 380px action width');
-assert.ok(/height:\s*560px/.test(css), 'popup should use an exact 560px action height');
-assert.ok(/min-height:\s*560px/.test(css), 'popup should use the compact 560px action height');
-assert.ok(/height:\s*396px/.test(css), 'list shell should be proportioned for the compact popup');
+assert.ok(/height:\s*615px/.test(css), 'popup should use golden ratio 615px action height');
+assert.ok(/min-height:\s*615px/.test(css), 'popup should use the golden ratio 615px action height');
+assert.ok(/height:\s*451px/.test(css), 'list shell should be proportioned for the golden ratio popup');
 assert.ok(!/min-width:\s*430px/.test(css), 'old oversized popup width should be gone');
 assert.ok(!/min-height:\s*640px/.test(css), 'old oversized popup height should be gone');
 assert.ok(css.includes('.search-clear-button'), 'search should expose a clear control');

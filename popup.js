@@ -8,7 +8,8 @@ const state = {
   busy: false,
   visibleEntries: [],
   currentTab: null,
-  currentTabEntry: null
+  currentTabEntry: null,
+  expandedDomains: new Set()
 };
 
 const els = {};
@@ -193,6 +194,81 @@ function renderEntry(entry) {
   return item;
 }
 
+function renderDomainGroup(group) {
+  const container = document.createElement('div');
+  container.className = 'domain-group';
+  container.dataset.domain = group.domain;
+
+  const isExpanded = state.expandedDomains.has(group.domain);
+
+  const header = document.createElement('button');
+  header.className = 'domain-group-header';
+  header.type = 'button';
+  header.setAttribute('aria-label', `${group.count} pages from ${group.domain}`);
+  header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+
+  const icon = document.createElement('span');
+  icon.className = 'domain-group-icon';
+  icon.setAttribute('aria-hidden', 'true');
+
+  const domainText = document.createElement('span');
+  domainText.className = 'domain-group-name';
+  domainText.textContent = group.domain;
+
+  const count = document.createElement('span');
+  count.className = 'domain-group-count';
+  count.textContent = group.count;
+
+  header.appendChild(icon);
+  header.appendChild(domainText);
+  header.appendChild(count);
+
+  const contentWrap = document.createElement('div');
+  contentWrap.className = 'domain-group-content';
+  contentWrap.style.display = isExpanded ? 'block' : 'none';
+
+  const content = document.createElement('div');
+  content.className = 'domain-group-entries';
+  group.entries.forEach(entry => {
+    content.appendChild(renderEntry(entry));
+  });
+
+  contentWrap.appendChild(content);
+  container.appendChild(header);
+  container.appendChild(contentWrap);
+
+  header.addEventListener('click', () => {
+    const wasExpanded = state.expandedDomains.has(group.domain);
+    if (wasExpanded) {
+      state.expandedDomains.delete(group.domain);
+      header.setAttribute('aria-expanded', 'false');
+      contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        contentWrap.style.maxHeight = '0';
+        contentWrap.style.opacity = '0';
+      });
+      setTimeout(() => {
+        contentWrap.style.display = 'none';
+      }, 280);
+    } else {
+      state.expandedDomains.add(group.domain);
+      header.setAttribute('aria-expanded', 'true');
+      contentWrap.style.display = 'block';
+      contentWrap.style.maxHeight = '0';
+      contentWrap.style.opacity = '0';
+      requestAnimationFrame(() => {
+        contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
+        contentWrap.style.opacity = '1';
+      });
+      setTimeout(() => {
+        contentWrap.style.maxHeight = 'none';
+      }, 280);
+    }
+  });
+
+  return container;
+}
+
 function renderEmptyState(visible) {
   const isEmpty = state.entries.length === 0;
   const hasNoMatches = !isEmpty && state.query;
@@ -219,7 +295,17 @@ function render() {
   syncCurrentTabEntry();
   const visible = ReadLaterCore.filterEntries(ReadLaterCore.sortEntriesForDisplay(state.entries), state.query);
   state.visibleEntries = visible;
-  els.entriesList.replaceChildren(...visible.map(renderEntry));
+
+  const groups = ReadLaterCore.groupEntriesByDomain(visible);
+  const elements = groups.map(group => {
+    if (group.type === 'single') {
+      return renderEntry(group.entry);
+    } else {
+      return renderDomainGroup(group);
+    }
+  });
+
+  els.entriesList.replaceChildren(...elements);
   renderEmptyState(visible);
   renderAddButtonState();
   els.clearSearchBtn.classList.toggle('hidden', !state.query);

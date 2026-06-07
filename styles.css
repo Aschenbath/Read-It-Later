@@ -718,6 +718,117 @@ h1 {
   display: none !important;
 }
 
+.domain-group {
+  margin-bottom: 12px;
+}
+
+.domain-group-header {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(207, 203, 191, 0.8);
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(79, 155, 133, 0.06), rgba(201, 137, 66, 0.04));
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.domain-group-header:hover,
+.domain-group-header:focus-visible {
+  border-color: #98c6b5;
+  background: linear-gradient(135deg, rgba(79, 155, 133, 0.12), rgba(201, 137, 66, 0.06));
+  box-shadow: 0 4px 12px rgba(79, 155, 133, 0.15);
+  outline: none;
+}
+
+.domain-group-icon {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.domain-group-icon::before,
+.domain-group-icon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+  transform-origin: center;
+}
+
+.domain-group-icon::before {
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.domain-group-icon::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.domain-group-header[aria-expanded="true"] .domain-group-icon {
+  transform: rotate(180deg);
+}
+
+.domain-group-header[aria-expanded="true"] .domain-group-icon::after {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.domain-group-name {
+  flex: 1;
+  min-width: 0;
+  color: #2d3942;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.domain-group-count {
+  flex-shrink: 0;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.domain-group-content {
+  overflow: hidden;
+  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.28s ease;
+}
+
+.domain-group-entries {
+  padding-top: 10px;
+}
+
+.domain-group-entries .entry-card {
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
 @media (max-width: 420px) {
   .app {
     padding-left: 14px;

@@ -167,6 +167,30 @@ function isSavableTab(tab) {
   return !!url && !/^(about:|chrome:\/\/newtab|edge:\/\/newtab)$/i.test(url);
 }
 
+function groupEntriesByDomain(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  const byDomain = new Map();
+
+  for (const entry of list) {
+    const domain = entry.domain || 'unknown';
+    if (!byDomain.has(domain)) {
+      byDomain.set(domain, []);
+    }
+    byDomain.get(domain).push(entry);
+  }
+
+  const groups = [];
+  for (const [domain, items] of byDomain) {
+    if (items.length === 1) {
+      groups.push({ type: 'single', entry: items[0] });
+    } else {
+      groups.push({ type: 'group', domain, entries: items, count: items.length });
+    }
+  }
+
+  return groups;
+}
+
 globalThis.ReadLaterCore = {
   STORAGE_KEY,
   buildEntryFromTab,
@@ -176,6 +200,7 @@ globalThis.ReadLaterCore = {
   findEntryByUrl,
   formatSavedAt,
   filterEntries,
+  groupEntriesByDomain,
   idFromUrl,
   isSavableTab,
   isSafeIconUrl,
