@@ -207,9 +207,12 @@ function renderDomainGroup(group) {
   header.setAttribute('aria-label', `${group.count} pages from ${group.domain}`);
   header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
 
-  const icon = document.createElement('span');
-  icon.className = 'domain-group-icon';
-  icon.setAttribute('aria-hidden', 'true');
+  // Use the first entry's favicon for the group
+  const firstEntry = group.entries[0];
+  header.appendChild(makeIcon(firstEntry));
+
+  const info = document.createElement('span');
+  info.className = 'domain-group-info';
 
   const domainText = document.createElement('span');
   domainText.className = 'domain-group-name';
@@ -217,20 +220,29 @@ function renderDomainGroup(group) {
 
   const count = document.createElement('span');
   count.className = 'domain-group-count';
-  count.textContent = group.count;
+  count.textContent = `${group.count} pages`;
 
-  header.appendChild(icon);
-  header.appendChild(domainText);
-  header.appendChild(count);
+  info.appendChild(domainText);
+  info.appendChild(count);
+  header.appendChild(info);
+
+  const chevron = document.createElement('span');
+  chevron.className = 'domain-group-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  header.appendChild(chevron);
 
   const contentWrap = document.createElement('div');
   contentWrap.className = 'domain-group-content';
-  contentWrap.style.display = isExpanded ? 'block' : 'none';
+  if (!isExpanded) {
+    contentWrap.style.display = 'none';
+  }
 
   const content = document.createElement('div');
   content.className = 'domain-group-entries';
-  group.entries.forEach(entry => {
-    content.appendChild(renderEntry(entry));
+  group.entries.forEach((entry, index) => {
+    const card = renderEntry(entry);
+    card.style.setProperty('--stack-index', index);
+    content.appendChild(card);
   });
 
   contentWrap.appendChild(content);
@@ -249,7 +261,7 @@ function renderDomainGroup(group) {
       });
       setTimeout(() => {
         contentWrap.style.display = 'none';
-      }, 280);
+      }, 320);
     } else {
       state.expandedDomains.add(group.domain);
       header.setAttribute('aria-expanded', 'true');
@@ -262,7 +274,7 @@ function renderDomainGroup(group) {
       });
       setTimeout(() => {
         contentWrap.style.maxHeight = 'none';
-      }, 280);
+      }, 320);
     }
   });
 
