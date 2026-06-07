@@ -10,7 +10,9 @@ const state = {
   currentTab: null,
   currentTabEntry: null,
   expandedDomains: new Set(),
-  openedDomainTabs: new Map() // domain -> array of tab IDs
+  openedDomainTabs: new Map(), // domain -> array of tab IDs
+  selectionMode: false,
+  selectedIds: new Set()
 };
 
 const els = {};
@@ -79,6 +81,52 @@ async function persist(entries) {
 async function persistOpenedTabs() {
   const openedTabsObj = Object.fromEntries(state.openedDomainTabs);
   await chromeSet({ openedDomainTabs: openedTabsObj });
+}
+
+function enterSelectionMode() {
+  state.selectionMode = true;
+  state.selectedIds.clear();
+  document.body.classList.add('selection-mode');
+  render();
+}
+
+function exitSelectionMode() {
+  state.selectionMode = false;
+  state.selectedIds.clear();
+  document.body.classList.remove('selection-mode');
+  render();
+}
+
+function toggleSelection(entryId) {
+  if (state.selectedIds.has(entryId)) {
+    state.selectedIds.delete(entryId);
+  } else {
+    state.selectedIds.add(entryId);
+  }
+  render();
+}
+
+async function createGroupFromSelection() {
+  if (state.selectedIds.size === 0) return;
+
+  const groupName = prompt('Enter group name:', '');
+  if (!groupName || !groupName.trim()) {
+    return;
+  }
+
+  const trimmedName = groupName.trim();
+  const selectedEntries = state.entries.filter(e => state.selectedIds.has(e.id));
+
+  // Update domain for selected entries
+  const updatedEntries = state.entries.map(entry => {
+    if (state.selectedIds.has(entry.id)) {
+      return { ...entry, domain: trimmedName };
+    }
+    return entry;
+  });
+
+  await persist(updatedEntries);
+  exitSelectionMode();
 }
 
 function syncCurrentTabEntry() {
@@ -173,6 +221,20 @@ function renderEntry(entry) {
   item.setAttribute('role', 'listitem');
   item.classList.toggle('is-current-tab', !!state.currentTabEntry && state.currentTabEntry.id === entry.id);
   item.classList.toggle('is-read', !!entry.isRead);
+  item.classList.toggle('is-selected', state.selectedIds.has(entry.id));
+
+  // Selection mode checkbox
+  if (state.selectionMode) {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'entry-checkbox';
+    checkbox.checked = state.selectedIds.has(entry.id);
+    checkbox.addEventListener('change', (e) => {
+      e.stopPropagation();
+      toggleSelection(entry.id);
+    });
+    item.appendChild(checkbox);
+  }
 
   const openButton = document.createElement('button');
   openButton.className = 'entry-open-button';
@@ -184,9 +246,6 @@ function renderEntry(entry) {
   const title = document.createElement('span');
   title.className = 'entry-title';
   title.textContent = entry.title;
-  if (entry.title && entry.title.length > 35) {
-    title.title = entry.title;
-  }
   if (entry.title && entry.title.length > 35) {
     title.title = entry.title;
   }
@@ -220,14 +279,53 @@ function renderEntry(entry) {
   item.appendChild(openButton);
   item.appendChild(del);
 
-  openButton.addEventListener('click', () => {
-    openEntry(entry);
-    markAsRead(entry);
+  // Long press detection
+  let longPressTimer = null;
+  let touchMoved = false;
+
+  const startLongPress = (e) => {
+    if (state.selectionMode) return;
+    touchMoved = false;
+    longPressTimer = setTimeout(() => {
+      enterSelectionMode();
+      toggleSelection(entry.id);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
+
+  const handleMove = () => {
+    touchMoved = true;
+    cancelLongPress();
+  };
+
+  openButton.addEventListener('mousedown', startLongPress);
+  openButton.addEventListener('touchstart', startLongPress, { passive: true });
+  openButton.addEventListener('mouseup', cancelLongPress);
+  openButton.addEventListener('touchend', cancelLongPress);
+  openButton.addEventListener('mousemove', handleMove);
+  openButton.addEventListener('touchmove', handleMove, { passive: true });
+
+  openButton.addEventListener('click', (e) => {
+    if (state.selectionMode) {
+      e.preventDefault();
+      toggleSelection(entry.id);
+    } else if (!touchMoved) {
+      openEntry(entry);
+      markAsRead(entry);
+    }
   });
 
   openButton.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    toggleReadStatus(entry);
+    if (!state.selectionMode) {
+      toggleReadStatus(entry);
+    }
   });
 
   del.addEventListener('click', () => removeEntry(entry));
@@ -435,10 +533,14 @@ function render() {
   renderEmptyState(visible);
   renderAddButtonState();
   els.clearSearchBtn.classList.toggle('hidden', !state.query);
-  if (state.query) {
-    setStatus(`${visible.length} matched`);
+
+  // Update selection toolbar
+  if (state.selectionMode) {
+    els.selectionToolbar.classList.remove('hidden');
+    els.selectionCount.textContent = `${state.selectedIds.size} selected`;
+    els.createGroupBtn.disabled = state.selectedIds.size === 0;
   } else {
-    setStatus('');
+    els.selectionToolbar.classList.add('hidden');
   }
 }
 
@@ -516,11 +618,20 @@ function bind() {
     state.query = els.searchInput.value;
     render();
   });
+  els.cancelSelectionBtn.addEventListener('click', exitSelectionMode);
+  els.createGroupBtn.addEventListener('click', createGroupFromSelection);
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && state.query) {
-      event.preventDefault();
-      setSearch('', { focus: false });
-      return;
+    if (event.key === 'Escape') {
+      if (state.selectionMode) {
+        event.preventDefault();
+        exitSelectionMode();
+        return;
+      }
+      if (state.query) {
+        event.preventDefault();
+        setSearch('', { focus: false });
+        return;
+      }
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
@@ -564,6 +675,10 @@ function init() {
   els.emptyState = byId('emptyState');
   els.emptyTitle = byId('emptyTitle');
   els.statusText = byId('statusText');
+  els.selectionToolbar = byId('selectionToolbar');
+  els.cancelSelectionBtn = byId('cancelSelectionBtn');
+  els.createGroupBtn = byId('createGroupBtn');
+  els.selectionCount = byId('selectionCount');
   bind();
   loadEntries().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not load list');
