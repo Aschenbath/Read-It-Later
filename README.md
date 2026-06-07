@@ -22,13 +22,9 @@
 
 ### 📸 界面预览
 
-#### 收藏列表
-
 <p align="center">
-  <img src="docs/screenshots/popup-with-entries.png" width="400" alt="Read It Later 收藏列表">
+  <img src="docs/screenshots/hero-display.png" width="800" alt="Read It Later 产品展示">
 </p>
-
-清晰的列表视图，带搜索栏、域名图标，一键访问已保存页面。按 `Alt+1` 随时保存/移除当前页面，桌面通知确认操作。
 
 <details>
 <summary>📋 展开完整功能表</summary>
@@ -216,13 +212,9 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ### 📸 Screenshots
 
-#### Saved Pages List
-
 <p align="center">
-  <img src="docs/screenshots/popup-with-entries.png" width="400" alt="Read It Later popup list">
+  <img src="docs/screenshots/hero-display.png" width="800" alt="Read It Later Product Display">
 </p>
-
-Clean list view with search bar, domain icons, and one-click access to saved pages. Press `Alt+1` anywhere to save/remove current page, desktop notification confirms the action.
 
 <details>
 <summary>📋 Expand Full Feature Map</summary>
