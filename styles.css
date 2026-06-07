@@ -375,19 +375,35 @@ h1 {
   background: rgba(79, 155, 133, 0.04);
 }
 
+.entry-card.is-dragging {
+  opacity: 0.5;
+  cursor: move;
+}
+
 .selection-mode .entry-card {
   cursor: pointer;
+}
+
+.selection-mode .entry-card.is-selected {
+  cursor: grab;
+}
+
+.selection-mode .entry-card.is-selected:active {
+  cursor: grabbing;
 }
 
 .selection-mode .domain-group-header {
   cursor: pointer;
   border-color: var(--accent);
   background: rgba(79, 155, 133, 0.04);
+  transition: all 0.2s ease;
 }
 
-.selection-mode .domain-group-header:hover {
-  background: rgba(79, 155, 133, 0.12);
+.selection-mode .domain-group-header:hover,
+.selection-mode .domain-group-header.is-drag-over {
+  background: rgba(79, 155, 133, 0.18);
   border-color: var(--accent);
+  transform: scale(1.01);
 }
 
 .add-button.is-selection-mode .add-icon {
@@ -426,6 +442,12 @@ h1 {
 .create-group-button:hover {
   background: rgba(79, 155, 133, 0.12);
   border-color: var(--accent);
+}
+
+.create-group-button.is-drag-over {
+  background: rgba(79, 155, 133, 0.18);
+  border-color: var(--accent);
+  transform: scale(1.02);
 }
 
 .create-group-input-wrap {

@@ -237,6 +237,11 @@ function renderEntry(entry) {
   item.classList.toggle('is-read', !!entry.isRead);
   item.classList.toggle('is-selected', state.selectedIds.has(entry.id));
 
+  // Make entry draggable in selection mode
+  if (state.selectionMode && state.selectedIds.has(entry.id)) {
+    item.draggable = true;
+  }
+
   const openButton = document.createElement('button');
   openButton.className = 'entry-open-button';
   openButton.type = 'button';
@@ -331,6 +336,19 @@ function renderEntry(entry) {
 
   del.addEventListener('click', () => removeEntry(entry));
 
+  // Drag events for selection mode
+  item.addEventListener('dragstart', (e) => {
+    if (state.selectionMode && state.selectedIds.has(entry.id)) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', entry.id);
+      item.classList.add('is-dragging');
+    }
+  });
+
+  item.addEventListener('dragend', () => {
+    item.classList.remove('is-dragging');
+  });
+
   return item;
 }
 
@@ -354,6 +372,28 @@ function renderCreateGroupItem() {
   inputWrap.appendChild(input);
   item.appendChild(button);
   item.appendChild(inputWrap);
+
+  // Drop zone for creating new group
+  button.addEventListener('dragover', (e) => {
+    if (state.selectionMode && state.selectedIds.size > 0) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      button.classList.add('is-drag-over');
+    }
+  });
+
+  button.addEventListener('dragleave', () => {
+    button.classList.remove('is-drag-over');
+  });
+
+  button.addEventListener('drop', (e) => {
+    e.preventDefault();
+    button.classList.remove('is-drag-over');
+    // Show input on drop
+    button.classList.add('hidden');
+    inputWrap.classList.remove('hidden');
+    input.focus();
+  });
 
   button.addEventListener('click', () => {
     button.classList.add('hidden');
@@ -462,6 +502,27 @@ function renderDomainGroup(group) {
   contentWrap.appendChild(content);
   container.appendChild(header);
   container.appendChild(contentWrap);
+
+  // Drop zone for dragging entries to this group
+  header.addEventListener('dragover', (e) => {
+    if (state.selectionMode && state.selectedIds.size > 0) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      header.classList.add('is-drag-over');
+    }
+  });
+
+  header.addEventListener('dragleave', () => {
+    header.classList.remove('is-drag-over');
+  });
+
+  header.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    header.classList.remove('is-drag-over');
+    if (state.selectionMode && state.selectedIds.size > 0) {
+      await mergeSelectionToGroup(group.domain);
+    }
+  });
 
   header.addEventListener('click', (e) => {
     // Don't toggle if clicking action buttons
