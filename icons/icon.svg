@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Read It Later">
+  <!-- 圆形背景 -->
+  <circle cx="64" cy="64" r="60" fill="#f5f5f5"/>
+
+  <!-- 书签主体 - 黄金分割比例 -->
+  <!-- 宽度 = 40, 高度 = 40 * 1.618 ≈ 65 -->
+  <g id="bookshelf-stack" stroke="#2d2d2d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- 书签外框 -->
+    <path d="M 44 24
+             A 4 4 0 0 1 48 20
+             L 80 20
+             A 4 4 0 0 1 84 24
+             L 84 98
+             A 2 2 0 0 1 81.504 99.736
+             L 68.256 91.633
+             A 4 4 0 0 0 59.744 91.633
+             L 46.496 99.736
+             A 2 2 0 0 1 44 98
+             Z"
+          fill="#2d2d2d"
+          stroke="none"/>
+
+    <!-- 减号横线 -->
+    <g id="bookmark-tab">
+      <line x1="56" y1="48" x2="72" y2="48" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <g id="shelf-lines"></g>
+</svg>

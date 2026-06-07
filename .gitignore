@@ -1,0 +1,6 @@
+history.md
+node_modules/
+.DS_Store
+*.log
+*.crx
+*.pem

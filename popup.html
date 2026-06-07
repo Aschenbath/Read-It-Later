@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Read It Later</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app" aria-label="Read It Later">
+    <header class="app-header">
+      <h1>Read It Later</h1>
+      <button id="addCurrentPageBtn" class="add-button" type="button" title="Add current page" aria-label="Add current page">
+        <span class="add-icon" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <i></i>
+        </span>
+      </button>
+    </header>
+
+    <label class="search-wrap" for="searchInput">
+      <span class="search-icon" aria-hidden="true"></span>
+      <input id="searchInput" type="search" placeholder="Find what you meant to read..." autocomplete="off" spellcheck="false">
+      <button id="clearSearchBtn" class="search-clear-button hidden" type="button" title="Clear search" aria-label="Clear search">
+        <span aria-hidden="true"></span>
+      </button>
+    </label>
+
+    <section class="list-shell" aria-live="polite">
+      <div id="entriesList" class="entries-list" role="list"></div>
+      <div id="emptyState" class="empty-state hidden">
+        <span class="empty-mark" aria-hidden="true"></span>
+        <strong id="emptyTitle">No pages yet</strong>
+        <span id="emptyCopy">Save the current tab when you want a quiet reading queue.</span>
+        <button id="emptyActionBtn" class="empty-action-button" type="button" data-action="add">Save current page</button>
+      </div>
+    </section>
+
+    <footer class="status-row">
+      <p id="statusText" class="status-text" role="status"></p>
+    </footer>
+  </main>
+
+  <script src="read-later-core.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

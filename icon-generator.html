@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Read It Later Icon - 黄金比例版</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f4ec;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+    h1 { color: #33383c; font-size: 24px; font-weight: 600; }
+    .preview-container {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .preview-box {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .preview-label { font-size: 14px; color: #666; font-weight: 500; }
+    canvas {
+      border: 1px solid #e5e5e5;
+      border-radius: 4px;
+    }
+    button {
+      background: #5b8a72;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+    }
+    button:hover { background: #4a7360; }
+    .note {
+      background: #fff7e8;
+      border: 2px solid #e8dcc5;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 600px;
+      color: #5d4e3d;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>📑 书签图标 - 黄金分割比例</h1>
+
+  <div class="note">
+    <strong>✨ 黄金比例设计（1:1.618）</strong>
+    <ul style="padding-left: 20px; margin-top: 8px;">
+      <li>宽度 40px，高度 65px（黄金比例）</li>
+      <li>简洁的书签形状 + 白色横线</li>
+      <li>浅灰圆形背景</li>
+      <li>矢量渲染，清晰锐利</li>
+    </ul>
+  </div>
+
+  <div class="preview-container" id="container"></div>
+
+  <script>
+    const svgSource = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <circle cx="64" cy="64" r="60" fill="#f5f5f5"/>
+  <g>
+    <path d="M 44 24 A 4 4 0 0 1 48 20 L 80 20 A 4 4 0 0 1 84 24 L 84 98 A 2 2 0 0 1 81.504 99.736 L 68.256 91.633 A 4 4 0 0 0 59.744 91.633 L 46.496 99.736 A 2 2 0 0 1 44 98 Z" fill="#2d2d2d"/>
+    <line x1="56" y1="48" x2="72" y2="48" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>`;
+
+    const sizes = [16, 32, 48, 128];
+    const container = document.getElementById('container');
+
+    sizes.forEach(size => {
+      const box = document.createElement('div');
+      box.className = 'preview-box';
+
+      const label = document.createElement('div');
+      label.className = 'preview-label';
+      label.textContent = `${size} × ${size}`;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx = canvas.getContext('2d');
+
+      const img = new Image();
+      const svgBlob = new Blob([svgSource], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+
+      const downloadBtn = document.createElement('button');
+      downloadBtn.textContent = `下载 icon-${size}.png`;
+      downloadBtn.onclick = () => {
+        canvas.toBlob(blob => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `icon-${size}.png`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }, 'image/png');
+      };
+
+      box.appendChild(label);
+      box.appendChild(canvas);
+      box.appendChild(downloadBtn);
+      container.appendChild(box);
+    });
+  </script>
+</body>
+</html>
