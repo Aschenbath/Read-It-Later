@@ -9,7 +9,8 @@ const state = {
   visibleEntries: [],
   currentTab: null,
   currentTabEntry: null,
-  expandedDomains: new Set()
+  expandedDomains: new Set(),
+  openedDomainTabs: new Map() // domain -> array of tab IDs
 };
 
 const els = {};
@@ -273,14 +274,23 @@ function renderDomainGroup(group) {
   const actions = document.createElement('span');
   actions.className = 'domain-group-actions';
 
-  const openAllBtn = document.createElement('button');
-  openAllBtn.className = 'domain-group-action-btn';
-  openAllBtn.type = 'button';
-  openAllBtn.title = `Open all ${group.count} pages`;
-  openAllBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
-  openAllBtn.innerHTML = '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'domain-group-action-btn';
+  toggleBtn.type = 'button';
+  toggleBtn.dataset.domain = group.domain;
 
-  actions.appendChild(openAllBtn);
+  const isOpened = state.openedDomainTabs.has(group.domain);
+  toggleBtn.title = isOpened ? `Close all ${group.count} tabs` : `Open all ${group.count} pages`;
+  toggleBtn.setAttribute('aria-label', isOpened ? `Close all ${group.count} tabs from ${group.domain}` : `Open all ${group.count} pages from ${group.domain}`);
+  toggleBtn.innerHTML = isOpened
+    ? '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>'
+    : '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
+
+  if (isOpened) {
+    toggleBtn.classList.add('is-opened');
+  }
+
+  actions.appendChild(toggleBtn);
   header.appendChild(actions);
 
   const contentWrap = document.createElement('div');
@@ -335,13 +345,47 @@ function renderDomainGroup(group) {
     }
   });
 
-  openAllBtn.addEventListener('click', (e) => {
+  toggleBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    group.entries.forEach(entry => {
-      if (entry && entry.url) {
-        chrome.tabs.create({ url: entry.url, active: false });
+
+    const domain = group.domain;
+    const isCurrentlyOpened = state.openedDomainTabs.has(domain);
+
+    if (isCurrentlyOpened) {
+      // Close all tabs for this domain
+      const tabIds = state.openedDomainTabs.get(domain) || [];
+      for (const tabId of tabIds) {
+        try {
+          await chrome.tabs.remove(tabId);
+        } catch (err) {
+          // Tab might already be closed manually
+          console.log('Tab already closed:', tabId);
+        }
       }
-    });
+      state.openedDomainTabs.delete(domain);
+
+      // Update button UI
+      toggleBtn.classList.remove('is-opened');
+      toggleBtn.title = `Open all ${group.count} pages`;
+      toggleBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
+      toggleBtn.innerHTML = '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
+    } else {
+      // Open all tabs for this domain
+      const tabIds = [];
+      for (const entry of group.entries) {
+        if (entry && entry.url) {
+          const tab = await chrome.tabs.create({ url: entry.url, active: false });
+          tabIds.push(tab.id);
+        }
+      }
+      state.openedDomainTabs.set(domain, tabIds);
+
+      // Update button UI
+      toggleBtn.classList.add('is-opened');
+      toggleBtn.title = `Close all ${group.count} tabs`;
+      toggleBtn.setAttribute('aria-label', `Close all ${group.count} tabs from ${group.domain}`);
+      toggleBtn.innerHTML = '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>';
+    }
   });
 
   return container;
