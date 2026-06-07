@@ -404,6 +404,56 @@ h1 {
   cursor: not-allowed;
 }
 
+/* Create new group inline item */
+.create-group-item {
+  margin-bottom: 10px;
+}
+
+.create-group-button {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 18px;
+  border: 2px dashed var(--accent);
+  border-radius: 12px;
+  background: rgba(79, 155, 133, 0.06);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-group-button:hover {
+  background: rgba(79, 155, 133, 0.12);
+  border-color: var(--accent);
+}
+
+.create-group-input-wrap {
+  width: 100%;
+}
+
+.create-group-input {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 18px;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  background: var(--surface);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+
+.create-group-input::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.create-group-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 155, 133, 0.1);
+}
+
 .entry-open-button {
   width: 100%;
   min-height: 60px;

@@ -334,6 +334,57 @@ function renderEntry(entry) {
   return item;
 }
 
+function renderCreateGroupItem() {
+  const item = document.createElement('div');
+  item.className = 'create-group-item';
+
+  const button = document.createElement('button');
+  button.className = 'create-group-button';
+  button.type = 'button';
+  button.textContent = '+ Create new group...';
+
+  const inputWrap = document.createElement('div');
+  inputWrap.className = 'create-group-input-wrap hidden';
+
+  const input = document.createElement('input');
+  input.className = 'create-group-input';
+  input.type = 'text';
+  input.placeholder = 'Enter group name...';
+
+  inputWrap.appendChild(input);
+  item.appendChild(button);
+  item.appendChild(inputWrap);
+
+  button.addEventListener('click', () => {
+    button.classList.add('hidden');
+    inputWrap.classList.remove('hidden');
+    input.focus();
+  });
+
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      const groupName = input.value.trim();
+      if (groupName) {
+        await mergeSelectionToGroup(groupName);
+      }
+    } else if (e.key === 'Escape') {
+      button.classList.remove('hidden');
+      inputWrap.classList.add('hidden');
+      input.value = '';
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      button.classList.remove('hidden');
+      inputWrap.classList.add('hidden');
+      input.value = '';
+    }, 150);
+  });
+
+  return item;
+}
+
 function renderDomainGroup(group) {
   const container = document.createElement('div');
   container.className = 'domain-group';
@@ -514,19 +565,12 @@ function renderEmptyState(visible) {
 
 function renderAddButtonState() {
   if (state.selectionMode) {
-    // In selection mode, button becomes "Create Group"
+    // In selection mode, disable button (use inline create group item)
     els.addCurrentPageBtn.classList.remove('is-saved');
     els.addCurrentPageBtn.classList.add('is-selection-mode');
-    els.addCurrentPageBtn.title = state.selectedIds.size > 0
-      ? `Create group from ${state.selectedIds.size} selected`
-      : 'Select entries to create group';
-    els.addCurrentPageBtn.setAttribute(
-      'aria-label',
-      state.selectedIds.size > 0
-        ? `Create group from ${state.selectedIds.size} selected entries`
-        : 'Select entries to create group'
-    );
-    els.addCurrentPageBtn.disabled = state.selectedIds.size === 0;
+    els.addCurrentPageBtn.title = 'Use "Create new group" in list';
+    els.addCurrentPageBtn.setAttribute('aria-label', 'Use "Create new group" in list');
+    els.addCurrentPageBtn.disabled = true;
   } else {
     // Normal mode
     els.addCurrentPageBtn.classList.remove('is-selection-mode');
@@ -555,6 +599,12 @@ function render() {
     }
   });
 
+  // Insert "Create new group" item at the top in selection mode
+  if (state.selectionMode && state.selectedIds.size > 0) {
+    const createGroupItem = renderCreateGroupItem();
+    elements.unshift(createGroupItem);
+  }
+
   els.entriesList.replaceChildren(...elements);
   renderEmptyState(visible);
   renderAddButtonState();
@@ -567,9 +617,8 @@ function render() {
 }
 
 async function addCurrentPage() {
-  // In selection mode, create group instead
+  // In selection mode, do nothing (use inline create group item instead)
   if (state.selectionMode) {
-    await createGroupFromSelection();
     return;
   }
 
