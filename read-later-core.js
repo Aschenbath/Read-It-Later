@@ -151,15 +151,40 @@ function deleteEntry(entries, id) {
 
 function filterEntries(entries, query) {
   const list = Array.isArray(entries) ? entries : [];
-  const q = cleanText(query).toLowerCase();
+  const q = cleanText(query);
   if (!q) return [...list];
+
+  // Parse @domain filter
+  let domainFilter = '';
+  let textQuery = q;
+  const domainMatch = q.match(/@(\S+)/);
+  if (domainMatch) {
+    domainFilter = domainMatch[1].toLowerCase();
+    textQuery = q.replace(/@\S+/g, '').trim();
+  }
+
+  const textQueryLower = textQuery.toLowerCase();
+
   return list.filter((entry) => {
-    const text = [
-      entry && entry.title,
-      entry && entry.domain,
-      entry && entry.url
-    ].map(value => String(value || '').toLowerCase()).join(' ');
-    return text.includes(q);
+    // Domain filter check
+    if (domainFilter) {
+      const entryDomain = String(entry && entry.domain || '').toLowerCase();
+      if (!entryDomain.includes(domainFilter)) {
+        return false;
+      }
+    }
+
+    // Text search check
+    if (textQueryLower) {
+      const text = [
+        entry && entry.title,
+        entry && entry.domain,
+        entry && entry.url
+      ].map(value => String(value || '').toLowerCase()).join(' ');
+      return text.includes(textQueryLower);
+    }
+
+    return true;
   });
 }
 
