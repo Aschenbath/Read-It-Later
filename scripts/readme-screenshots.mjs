@@ -18,58 +18,49 @@ const iconData = `data:image/svg+xml;base64,${readFileSync(path.join(projectRoot
 
 const demoEntries = [
   {
-    id: 'linux-techspar',
-    title: '【开源】TechSpar：把专项训练、简历面...',
-    url: 'https://linux.do/t/topic/123',
-    domain: 'linux.do',
-    favIconUrl: '',
+    id: "google",
+    title: "Google",
+    url: "https://www.google.com/",
+    domain: "www.google.com",
+    favIconUrl: "",
     createdAt: 1780732800000,
     updatedAt: 1780732800000
   },
   {
-    id: 'bilibili-stats',
-    title: '【期末冲刺上大分】《统计学》2小时快速...',
-    url: 'https://www.bilibili.com/video/BV1stats',
-    domain: 'www.bilibili.com',
-    favIconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB4PSI4IiB5PSIxMCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iI2Y4ZmRmZiIgc3Ryb2tlPSIjMDBhZWRmIiBzdHJva2Utd2lkdGg9IjQiLz48cmVjdCB4PSIyMiIgeT0iMjgiIHdpZHRoPSI4IiBoZWlnaHQ9IjEyIiByeD0iMiIgZmlsbD0iIzAwYWVkZiIvPjxyZWN0IHg9IjM0IiB5PSIyOCIgd2lkdGg9IjgiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjMDBhZWRmIi8+PHBhdGggZD0iTTIyIDEwIDE2IDIgTTEyIDggMjIgMTgiIHN0cm9rZT0iIzAwYWVkZiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNNDIgMTAgNDggMiBNNTIgOCA0MiAxOCIgc3Ryb2tlPSIjMDBhZWRmIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==',
+    id: "claude",
+    title: "Claude - Anthropic",
+    url: "https://claude.ai/",
+    domain: "claude.ai",
+    favIconUrl: "",
     createdAt: 1780731800000,
     updatedAt: 1780731800000
   },
   {
-    id: 'linux-love',
-    title: '和喜欢的男孩子在一起了！ - 搞七捻三 / ...',
-    url: 'https://linux.do/t/topic/456',
-    domain: 'linux.do',
-    favIconUrl: '',
+    id: "chatgpt",
+    title: "ChatGPT - OpenAI",
+    url: "https://chat.openai.com/",
+    domain: "chat.openai.com",
+    favIconUrl: "",
     createdAt: 1780730800000,
     updatedAt: 1780730800000
   },
   {
-    id: 'linux-douyin',
-    title: '开源！抖音自动续火花 - 开发调优 / 开发...',
-    url: 'https://linux.do/t/topic/789',
-    domain: 'linux.do',
-    favIconUrl: '',
+    id: "github",
+    title: "GitHub - Where the world builds software",
+    url: "https://github.com/",
+    domain: "github.com",
+    favIconUrl: "",
     createdAt: 1780729800000,
     updatedAt: 1780729800000
   },
   {
-    id: 'youtube-oracle',
-    title: '💯 Oracle Cloud Always Free 永久免费V...',
-    url: 'https://www.youtube.com/watch?v=oracle',
-    domain: 'www.youtube.com',
-    favIconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB4PSI4IiB5PSIxNCIgd2lkdGg9IjQ4IiBoZWlnaHQ9IjM2IiByeD0iOSIgZmlsbD0iI2ZmMDAzMyIvPjxwYXRoIGQ9Ik0yOCAyM3YxOGwxNi05eiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==',
+    id: "wikipedia",
+    title: "Wikipedia - The Free Encyclopedia",
+    url: "https://en.wikipedia.org/",
+    domain: "en.wikipedia.org",
+    favIconUrl: "",
     createdAt: 1780728800000,
     updatedAt: 1780728800000
-  },
-  {
-    id: 'linux-gpt',
-    title: 'gpt plus 薅多了用不完，来薅，可以用 g...',
-    url: 'https://linux.do/t/topic/101',
-    domain: 'linux.do',
-    favIconUrl: '',
-    createdAt: 1780727800000,
-    updatedAt: 1780727800000
   }
 ];
 
