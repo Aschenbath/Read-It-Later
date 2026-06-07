@@ -12,7 +12,8 @@ const state = {
   expandedDomains: new Set(),
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
-  selectedIds: new Set()
+  selectedIds: new Set(),
+  showCreateGroup: false
 };
 
 const els = {};
@@ -86,6 +87,7 @@ async function persistOpenedTabs() {
 function enterSelectionMode() {
   state.selectionMode = true;
   state.selectedIds.clear();
+  state.showCreateGroup = false;
   document.body.classList.add('selection-mode');
   render();
 }
@@ -93,6 +95,7 @@ function enterSelectionMode() {
 function exitSelectionMode() {
   state.selectionMode = false;
   state.selectedIds.clear();
+  state.showCreateGroup = false;
   document.body.classList.remove('selection-mode');
   render();
 }
@@ -626,12 +629,16 @@ function renderEmptyState(visible) {
 
 function renderAddButtonState() {
   if (state.selectionMode) {
-    // In selection mode, disable button (use inline create group item)
+    // In selection mode, button toggles "Create new group" visibility
     els.addCurrentPageBtn.classList.remove('is-saved');
     els.addCurrentPageBtn.classList.add('is-selection-mode');
-    els.addCurrentPageBtn.title = 'Use "Create new group" in list';
-    els.addCurrentPageBtn.setAttribute('aria-label', 'Use "Create new group" in list');
-    els.addCurrentPageBtn.disabled = true;
+    els.addCurrentPageBtn.title = state.showCreateGroup
+      ? 'Hide create group input'
+      : 'Show create group input';
+    els.addCurrentPageBtn.setAttribute('aria-label', state.showCreateGroup
+      ? 'Hide create group input'
+      : 'Show create group input');
+    els.addCurrentPageBtn.disabled = false;
   } else {
     // Normal mode
     els.addCurrentPageBtn.classList.remove('is-selection-mode');
@@ -661,7 +668,7 @@ function render() {
   });
 
   // Insert "Create new group" item at the top in selection mode
-  if (state.selectionMode && state.selectedIds.size > 0) {
+  if (state.selectionMode && state.showCreateGroup && state.selectedIds.size > 0) {
     const createGroupItem = renderCreateGroupItem();
     elements.unshift(createGroupItem);
   }
@@ -678,8 +685,10 @@ function render() {
 }
 
 async function addCurrentPage() {
-  // In selection mode, do nothing (use inline create group item instead)
+  // In selection mode, show create group item
   if (state.selectionMode) {
+    state.showCreateGroup = true;
+    render();
     return;
   }
 
