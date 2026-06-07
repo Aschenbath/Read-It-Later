@@ -503,6 +503,15 @@ function init() {
   loadEntries().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not load list');
   });
+
+  // Listen for storage changes from background script (e.g., Alt+1 shortcut)
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes[storageKey]) {
+      loadEntries().catch((error) => {
+        console.error('Failed to reload entries:', error);
+      });
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
