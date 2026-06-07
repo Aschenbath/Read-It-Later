@@ -237,6 +237,27 @@ h1 {
   box-shadow: 0 0 0 3px rgba(79, 155, 133, 0.14);
 }
 
+/* Selection mode: search input shows selection count */
+.selection-mode #searchInput {
+  border-color: var(--accent);
+  background: rgba(79, 155, 133, 0.08);
+  color: var(--accent);
+  font-weight: 600;
+  cursor: default;
+}
+
+.selection-mode #searchInput:focus {
+  box-shadow: none;
+}
+
+.selection-mode .search-clear-button {
+  color: var(--accent);
+}
+
+.selection-mode .search-clear-button:hover {
+  background: rgba(79, 155, 133, 0.15);
+}
+
 .search-clear-button {
   position: absolute;
   right: 7px;

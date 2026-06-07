@@ -676,11 +676,21 @@ function render() {
   els.entriesList.replaceChildren(...elements);
   renderEmptyState(visible);
   renderAddButtonState();
-  els.clearSearchBtn.classList.toggle('hidden', !state.query);
-  if (state.query) {
-    setStatus(`${visible.length} matched`);
+
+  // Update search box based on selection mode
+  if (state.selectionMode) {
+    // In selection mode, show selection count and exit button
+    els.searchInput.value = `${state.selectedIds.size} selected`;
+    els.searchInput.disabled = true;
+    els.clearSearchBtn.classList.remove('hidden');
+    els.clearSearchBtn.title = 'Exit selection mode';
+    els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
   } else {
-    setStatus('');
+    // Normal mode
+    els.searchInput.disabled = false;
+    els.clearSearchBtn.classList.toggle('hidden', !state.query);
+    els.clearSearchBtn.title = 'Clear search';
+    els.clearSearchBtn.setAttribute('aria-label', 'Clear search');
   }
 }
 
@@ -759,7 +769,11 @@ function bind() {
     addCurrentPage();
   });
   els.clearSearchBtn.addEventListener('click', () => {
-    setSearch('');
+    if (state.selectionMode) {
+      exitSelectionMode();
+    } else {
+      setSearch('');
+    }
   });
   els.searchInput.addEventListener('input', () => {
     state.query = els.searchInput.value;
