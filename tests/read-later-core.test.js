@@ -44,7 +44,8 @@ assert.deepStrictEqual(buildEntryFromTab({
   domain: 'linux.do',
   favIconUrl: 'https://linux.do/favicon.ico',
   createdAt: now,
-  updatedAt: now
+  updatedAt: now,
+  isRead: false
 });
 
 assert.strictEqual(isSafeIconUrl('https://example.com/favicon.ico'), true);
@@ -70,7 +71,8 @@ assert.deepStrictEqual(normalizeEntry({
   domain: 'example.com',
   favIconUrl: '',
   createdAt: 1,
-  updatedAt: 2
+  updatedAt: 2,
+  isRead: false
 });
 
 const existing = [

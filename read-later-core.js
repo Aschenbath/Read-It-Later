@@ -71,7 +71,8 @@ function normalizeEntry(entry, now = Date.now()) {
     domain,
     favIconUrl: isSafeIconUrl(source.favIconUrl) ? cleanText(source.favIconUrl) : '',
     createdAt,
-    updatedAt
+    updatedAt,
+    isRead: typeof source.isRead === 'boolean' ? source.isRead : false
   };
 }
 

@@ -112,6 +112,26 @@ function openEntry(entry) {
   }
 }
 
+async function markAsRead(entry) {
+  if (!entry || entry.isRead) return;
+
+  const index = state.entries.findIndex(e => e.id === entry.id);
+  if (index === -1) return;
+
+  state.entries[index] = { ...state.entries[index], isRead: true };
+  await persist(state.entries);
+}
+
+async function toggleReadStatus(entry) {
+  if (!entry) return;
+
+  const index = state.entries.findIndex(e => e.id === entry.id);
+  if (index === -1) return;
+
+  state.entries[index] = { ...state.entries[index], isRead: !state.entries[index].isRead };
+  await persist(state.entries);
+}
+
 async function removeEntry(entry) {
   const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
   if (!next.changed) return;
@@ -141,6 +161,7 @@ function renderEntry(entry) {
   item.dataset.id = entry.id;
   item.setAttribute('role', 'listitem');
   item.classList.toggle('is-current-tab', !!state.currentTabEntry && state.currentTabEntry.id === entry.id);
+  item.classList.toggle('is-read', !!entry.isRead);
 
   const openButton = document.createElement('button');
   openButton.className = 'entry-open-button';
@@ -148,6 +169,14 @@ function renderEntry(entry) {
   openButton.title = entry.url;
   openButton.setAttribute('aria-label', `Open ${entry.title}`);
   openButton.dataset.entryId = entry.id;
+
+  // Unread indicator
+  if (!entry.isRead) {
+    const unreadDot = document.createElement('span');
+    unreadDot.className = 'unread-indicator';
+    unreadDot.setAttribute('aria-label', 'Unread');
+    openButton.appendChild(unreadDot);
+  }
 
   const title = document.createElement('span');
   title.className = 'entry-title';
@@ -188,7 +217,16 @@ function renderEntry(entry) {
   item.appendChild(openButton);
   item.appendChild(del);
 
-  openButton.addEventListener('click', () => openEntry(entry));
+  openButton.addEventListener('click', () => {
+    openEntry(entry);
+    markAsRead(entry);
+  });
+
+  openButton.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    toggleReadStatus(entry);
+  });
+
   del.addEventListener('click', () => removeEntry(entry));
 
   return item;
@@ -242,15 +280,7 @@ function renderDomainGroup(group) {
   openAllBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
   openAllBtn.innerHTML = '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
 
-  const deleteAllBtn = document.createElement('button');
-  deleteAllBtn.className = 'domain-group-action-btn domain-group-action-delete';
-  deleteAllBtn.type = 'button';
-  deleteAllBtn.title = `Remove all ${group.count} pages`;
-  deleteAllBtn.setAttribute('aria-label', `Remove all ${group.count} pages from ${group.domain}`);
-  deleteAllBtn.innerHTML = '<span class="action-icon action-icon-delete-all" aria-hidden="true"></span>';
-
   actions.appendChild(openAllBtn);
-  actions.appendChild(deleteAllBtn);
   header.appendChild(actions);
 
   const contentWrap = document.createElement('div');
@@ -312,19 +342,6 @@ function renderDomainGroup(group) {
         chrome.tabs.create({ url: entry.url, active: false });
       }
     });
-  });
-
-  deleteAllBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (!confirm(`Remove all ${group.count} pages from ${group.domain}?`)) {
-      return;
-    }
-
-    for (const entry of group.entries) {
-      const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
-      state.entries = next.entries;
-    }
-    await persist(state.entries);
   });
 
   return container;
