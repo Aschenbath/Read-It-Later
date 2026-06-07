@@ -231,6 +231,28 @@ function renderDomainGroup(group) {
   chevron.setAttribute('aria-hidden', 'true');
   header.appendChild(chevron);
 
+  // Quick actions for the group
+  const actions = document.createElement('span');
+  actions.className = 'domain-group-actions';
+
+  const openAllBtn = document.createElement('button');
+  openAllBtn.className = 'domain-group-action-btn';
+  openAllBtn.type = 'button';
+  openAllBtn.title = `Open all ${group.count} pages`;
+  openAllBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
+  openAllBtn.innerHTML = '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
+
+  const deleteAllBtn = document.createElement('button');
+  deleteAllBtn.className = 'domain-group-action-btn domain-group-action-delete';
+  deleteAllBtn.type = 'button';
+  deleteAllBtn.title = `Remove all ${group.count} pages`;
+  deleteAllBtn.setAttribute('aria-label', `Remove all ${group.count} pages from ${group.domain}`);
+  deleteAllBtn.innerHTML = '<span class="action-icon action-icon-delete-all" aria-hidden="true"></span>';
+
+  actions.appendChild(openAllBtn);
+  actions.appendChild(deleteAllBtn);
+  header.appendChild(actions);
+
   const contentWrap = document.createElement('div');
   contentWrap.className = 'domain-group-content';
   if (!isExpanded) {
@@ -249,7 +271,12 @@ function renderDomainGroup(group) {
   container.appendChild(header);
   container.appendChild(contentWrap);
 
-  header.addEventListener('click', () => {
+  header.addEventListener('click', (e) => {
+    // Don't toggle if clicking action buttons
+    if (e.target.closest('.domain-group-actions')) {
+      return;
+    }
+
     const wasExpanded = state.expandedDomains.has(group.domain);
     if (wasExpanded) {
       state.expandedDomains.delete(group.domain);
@@ -276,6 +303,28 @@ function renderDomainGroup(group) {
         contentWrap.style.maxHeight = 'none';
       }, 320);
     }
+  });
+
+  openAllBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    group.entries.forEach(entry => {
+      if (entry && entry.url) {
+        chrome.tabs.create({ url: entry.url, active: false });
+      }
+    });
+  });
+
+  deleteAllBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm(`Remove all ${group.count} pages from ${group.domain}?`)) {
+      return;
+    }
+
+    for (const entry of group.entries) {
+      const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
+      state.entries = next.entries;
+    }
+    await persist(state.entries);
   });
 
   return container;
