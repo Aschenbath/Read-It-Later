@@ -23,7 +23,7 @@
 ### 📸 界面预览
 
 <p align="center">
-  <img src="docs/screenshots/hero-display.png" width="800" alt="Read It Later 产品展示">
+  <img src="docs/screenshots/popup-with-entries.png" width="380" alt="Read It Later 收藏列表">
 </p>
 
 <details>
@@ -213,7 +213,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 ### 📸 Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/hero-display.png" width="800" alt="Read It Later Product Display">
+  <img src="docs/screenshots/popup-with-entries.png" width="380" alt="Read It Later popup list">
 </p>
 
 <details>
