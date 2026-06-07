@@ -106,6 +106,21 @@ function toggleSelection(entryId) {
   render();
 }
 
+async function mergeSelectionToGroup(targetDomain) {
+  if (state.selectedIds.size === 0) return;
+
+  // Update domain for selected entries
+  const updatedEntries = state.entries.map(entry => {
+    if (state.selectedIds.has(entry.id)) {
+      return { ...entry, domain: targetDomain };
+    }
+    return entry;
+  });
+
+  await persist(updatedEntries);
+  exitSelectionMode();
+}
+
 async function createGroupFromSelection() {
   if (state.selectedIds.size === 0) return;
 
@@ -400,6 +415,12 @@ function renderDomainGroup(group) {
   header.addEventListener('click', (e) => {
     // Don't toggle if clicking action buttons
     if (e.target.closest('.domain-group-actions')) {
+      return;
+    }
+
+    // In selection mode, merge selected entries to this group
+    if (state.selectionMode && state.selectedIds.size > 0) {
+      mergeSelectionToGroup(group.domain);
       return;
     }
 

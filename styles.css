@@ -379,6 +379,17 @@ h1 {
   cursor: pointer;
 }
 
+.selection-mode .domain-group-header {
+  cursor: pointer;
+  border-color: var(--accent);
+  background: rgba(79, 155, 133, 0.04);
+}
+
+.selection-mode .domain-group-header:hover {
+  background: rgba(79, 155, 133, 0.12);
+  border-color: var(--accent);
+}
+
 .add-button.is-selection-mode .add-icon {
   opacity: 0.5;
 }
