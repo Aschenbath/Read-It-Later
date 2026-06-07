@@ -58,9 +58,14 @@ function currentTab() {
 }
 
 async function loadEntries() {
-  const result = await chromeGet({ [storageKey]: [] });
+  const result = await chromeGet({ [storageKey]: [], openedDomainTabs: {} });
   const entries = Array.isArray(result[storageKey]) ? result[storageKey] : [];
   state.entries = ReadLaterCore.sortEntriesForDisplay(entries.map(entry => ReadLaterCore.normalizeEntry(entry)));
+
+  // Restore opened domain tabs state
+  const savedOpenedTabs = result.openedDomainTabs || {};
+  state.openedDomainTabs = new Map(Object.entries(savedOpenedTabs));
+
   await refreshCurrentTabState({ render: false, force: true });
   render();
 }
@@ -69,6 +74,11 @@ async function persist(entries) {
   state.entries = ReadLaterCore.sortEntriesForDisplay(entries);
   await chromeSet({ [storageKey]: state.entries });
   render();
+}
+
+async function persistOpenedTabs() {
+  const openedTabsObj = Object.fromEntries(state.openedDomainTabs);
+  await chromeSet({ openedDomainTabs: openedTabsObj });
 }
 
 function syncCurrentTabEntry() {
@@ -170,14 +180,6 @@ function renderEntry(entry) {
   openButton.title = entry.url;
   openButton.setAttribute('aria-label', `Open ${entry.title}`);
   openButton.dataset.entryId = entry.id;
-
-  // Unread indicator
-  if (!entry.isRead) {
-    const unreadDot = document.createElement('span');
-    unreadDot.className = 'unread-indicator';
-    unreadDot.setAttribute('aria-label', 'Unread');
-    openButton.appendChild(unreadDot);
-  }
 
   const title = document.createElement('span');
   title.className = 'entry-title';
@@ -363,6 +365,7 @@ function renderDomainGroup(group) {
         }
       }
       state.openedDomainTabs.delete(domain);
+      await persistOpenedTabs();
 
       // Update button UI
       toggleBtn.classList.remove('is-opened');
@@ -379,6 +382,7 @@ function renderDomainGroup(group) {
         }
       }
       state.openedDomainTabs.set(domain, tabIds);
+      await persistOpenedTabs();
 
       // Update button UI
       toggleBtn.classList.add('is-opened');

@@ -318,6 +318,24 @@ h1 {
   animation: entryIn 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
+/* Unread indicator: left accent stripe */
+.entry-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.entry-card:not(.is-read)::before {
+  opacity: 1;
+}
+
 @keyframes entryIn {
   from {
     opacity: 0;
@@ -374,28 +392,6 @@ h1 {
 
 .entry-card.is-read:hover .entry-open-button {
   opacity: 0.85;
-}
-
-.unread-indicator {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  transform: translateY(-50%);
-  box-shadow: 0 0 0 2px rgba(79, 155, 133, 0.2);
-  animation: unreadPulse 2.5s ease-in-out infinite;
-}
-
-@keyframes unreadPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 2px rgba(79, 155, 133, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(79, 155, 133, 0.15);
-  }
 }
 
 .entry-card:hover .entry-open-button,
@@ -499,6 +495,15 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   position: relative;
+  transition: font-weight 0.15s ease;
+}
+
+.entry-card:not(.is-read) .entry-title {
+  font-weight: 700;
+}
+
+.entry-card.is-read .entry-title {
+  font-weight: 600;
 }
 
 .entry-title[title]:hover::after {
@@ -557,6 +562,15 @@ h1 {
   line-height: 1.2;
   font-weight: 700;
   white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.entry-card:not(.is-read) .entry-saved-at {
+  color: var(--accent);
+}
+
+.entry-card.is-read .entry-saved-at {
+  color: #8a8172;
 }
 
 .delete-button {
