@@ -478,6 +478,23 @@ async function main() {
 
   {
     const { api } = createHarness();
+    api.state.emptyGroupDeleteArmed.add('Prearmed Empty');
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Prearmed Empty',
+      entries: [],
+      count: 0
+    });
+    const header = node.querySelector('.domain-group-header');
+    const chevron = node.querySelector('.domain-group-chevron');
+
+    assert.strictEqual(header.classList.contains('is-delete-armed'), true);
+    assert.strictEqual(chevron.title, 'Confirm remove empty group Prearmed Empty');
+    assert.strictEqual(chevron.getAttribute('aria-label'), 'Confirm remove empty group Prearmed Empty');
+  }
+
+  {
+    const { api } = createHarness();
     api.state.customGroups = ['Empty'];
     const emptyNode = api.renderDomainGroup({
       type: 'group',

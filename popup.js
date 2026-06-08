@@ -824,6 +824,7 @@ function renderDomainGroup(group) {
   if (group.count === 0) {
     chevron.setAttribute('role', 'button');
     chevron.tabIndex = 0;
+    header.classList.toggle('is-delete-armed', state.emptyGroupDeleteArmed.has(group.domain));
     setEmptyGroupChevronLabel(chevron, group.domain, state.emptyGroupDeleteArmed.has(group.domain));
   }
 
