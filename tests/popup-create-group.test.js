@@ -239,6 +239,7 @@ function instrumentPopup(source) {
       '  loadEntries,',
       '  addCurrentPage,',
       '  removeEntry,',
+      '  deleteSelectedEntries,',
       '  toggleViewMode,',
       '  init,',
       '  persistExpandedDomains,',
@@ -460,6 +461,39 @@ async function main() {
     const card = api.els.entriesList.querySelector(`[data-id="${entry.id}"]`);
     assert.ok(card, 'failed remove should render the original card again');
     assert.strictEqual(card.classList.contains('leaving'), false, 'failed remove should not leave the card in its exit state');
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'Selected A', url: 'https://docs.example/a' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Selected B', url: 'https://docs.example/b' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Unselected C', url: 'https://docs.example/c' }, 1000)
+    ];
+    api.state.entries = entries;
+    api.state.selectionMode = true;
+    api.state.selectedIds.add(entries[0].id);
+    api.state.selectedIds.add(entries[1].id);
+    api.state.pendingGroupSelectedIds = [entries[0].id, entries[1].id];
+    api.state.showCreateGroup = true;
+    api.render();
+
+    await assert.rejects(
+      () => api.deleteSelectedEntries(),
+      /Storage write failed/
+    );
+
+    assert.deepStrictEqual(api.state.entries.map(entry => entry.id), entries.map(entry => entry.id), 'failed bulk delete should keep entries in memory');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed bulk delete should not persist deletion');
+    assert.strictEqual(api.state.selectionMode, true, 'failed bulk delete should keep selection mode active');
+    assert.deepStrictEqual(Array.from(api.state.selectedIds), [entries[0].id, entries[1].id]);
+    assert.deepStrictEqual(api.state.pendingGroupSelectedIds, [entries[0].id, entries[1].id]);
+    assert.strictEqual(api.state.showCreateGroup, true);
+    assert.strictEqual(
+      Array.from(api.els.entriesList.querySelectorAll('.entry-card')).some(card => card.classList.contains('leaving')),
+      false,
+      'failed bulk delete should not leave selected cards in their exit state'
+    );
   }
 
   {

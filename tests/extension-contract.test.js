@@ -171,10 +171,19 @@ assert.ok(popupJs.includes("openButton.addEventListener('touchcancel', cancelLon
 assert.ok(!popupJs.includes('entry.timestamp'), 'entry insertion animation should use stored created/updated timestamps, not a missing timestamp field');
 const deleteSelectedBlock = popupJs.match(/async function deleteSelectedEntries\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
-  deleteSelectedBlock.includes('state.selectionMode = false;') &&
-  deleteSelectedBlock.includes('await persist(newEntries);') &&
-  deleteSelectedBlock.indexOf('state.selectionMode = false;') < deleteSelectedBlock.indexOf('await persist(newEntries);'),
-  'bulk delete should clear selection mode before persist triggers render'
+  deleteSelectedBlock.includes('await setPopupStorage({ [storageKey]: nextEntries });') &&
+    deleteSelectedBlock.includes('state.entries = nextEntries;') &&
+    deleteSelectedBlock.includes('state.selectionMode = false;') &&
+    deleteSelectedBlock.includes('catch (error)') &&
+    deleteSelectedBlock.includes('render();') &&
+    deleteSelectedBlock.indexOf('await setPopupStorage({ [storageKey]: nextEntries });') < deleteSelectedBlock.indexOf('state.selectionMode = false;'),
+  'bulk delete should commit selection cleanup only after storage write succeeds and should re-render on failure'
+);
+assert.ok(
+  popupJs.includes('function reportDeleteError') &&
+    popupJs.includes('deleteSelectedEntries().catch(reportDeleteError)') &&
+    popupJs.includes('removeEntry(entry).catch(reportDeleteError)'),
+  'delete entry actions should catch storage failures and surface them instead of fire-and-forget'
 );
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');

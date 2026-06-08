@@ -342,7 +342,9 @@ async function deleteSelectedEntries() {
   if (state.selectedIds.size === 0) return;
 
   const idsToDelete = Array.from(state.selectedIds);
-  const newEntries = state.entries.filter(e => !idsToDelete.includes(e.id));
+  const nextEntries = ReadLaterCore.sortEntriesForDisplay(
+    state.entries.filter(e => !idsToDelete.includes(e.id))
+  );
 
   // Add leaving animation to all selected cards
   const cards = idsToDelete.map(id =>
@@ -360,13 +362,20 @@ async function deleteSelectedEntries() {
     await new Promise(resolve => setTimeout(resolve, 160));
   }
 
+  try {
+    await setPopupStorage({ [storageKey]: nextEntries });
+  } catch (error) {
+    render();
+    throw error;
+  }
+
+  state.entries = nextEntries;
   state.selectionMode = false;
   state.selectedIds.clear();
   state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
   document.body.classList.remove('selection-mode');
-
-  await persist(newEntries);
+  render();
 }
 
 async function commitSelectionToGroup(targetDomain, options = {}) {
@@ -509,6 +518,10 @@ async function openEntry(entry) {
 
 function reportOpenEntryError(error) {
   setStatus(error && error.message ? error.message : 'Could not open page', { autoClear: false });
+}
+
+function reportDeleteError(error) {
+  setStatus(error && error.message ? error.message : 'Could not remove page', { autoClear: false });
 }
 
 function setEmptyGroupChevronLabel(chevron, domain, isConfirming) {
@@ -726,11 +739,7 @@ function renderEntry(entry) {
     }
   });
 
-  del.addEventListener('click', () => {
-    removeEntry(entry).catch((error) => {
-      setStatus(error && error.message ? error.message : 'Could not remove page');
-    });
-  });
+  del.addEventListener('click', () => removeEntry(entry).catch(reportDeleteError));
 
   // Drag events for selection mode
   item.addEventListener('dragstart', (e) => {
@@ -1387,7 +1396,9 @@ function bind() {
       setSearch('');
     }
   });
-  els.deleteSelectedBtn.addEventListener('click', deleteSelectedEntries);
+  els.deleteSelectedBtn.addEventListener('click', () => {
+    deleteSelectedEntries().catch(reportDeleteError);
+  });
   els.viewModeBtn.addEventListener('click', toggleViewMode);
 
   // Debounce search input for performance
@@ -1457,14 +1468,13 @@ function bind() {
       // In selection mode, delete all selected entries
       if (state.selectionMode && state.selectedIds.size > 0) {
         event.preventDefault();
-        deleteSelectedEntries();
-        return;
+        return deleteSelectedEntries().catch(reportDeleteError);
       }
       // In normal mode, delete focused entry
       const entry = focusedEntry();
       if (entry) {
         event.preventDefault();
-        removeEntry(entry);
+        return removeEntry(entry).catch(reportDeleteError);
       }
       return;
     }
