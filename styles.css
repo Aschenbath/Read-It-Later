@@ -236,8 +236,9 @@ h1 {
 .view-mode-icon::before {
   content: "";
   position: absolute;
-  left: 3px;
-  top: 3px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 10px;
   height: 10px;
   border: 2px solid currentColor;
