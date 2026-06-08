@@ -254,7 +254,7 @@ function instrumentPopup(source) {
 
 function createHarness(options = {}) {
   const activeTab = options.tab || null;
-  const getError = options.getError || '';
+  let getError = options.getError || '';
   const setError = options.setError || '';
   const queryError = options.queryError || '';
   const createResults = Array.isArray(options.createResults) ? [...options.createResults] : [];
@@ -267,6 +267,8 @@ function createHarness(options = {}) {
   const getCalls = [];
   const setCalls = [];
   const changeListeners = [];
+  const consoleErrors = [];
+  const timers = [];
   const context = {
     ReadLaterCore,
     chrome: {
@@ -349,14 +351,28 @@ function createHarness(options = {}) {
     Date,
     Math,
     Promise,
-    clearTimeout() {},
-    console,
+    clearTimeout(timer) {
+      const index = timers.indexOf(timer);
+      if (index >= 0) {
+        timers.splice(index, 1);
+      }
+    },
+    console: {
+      error(...args) {
+        consoleErrors.push(args);
+      }
+    },
     document,
     requestAnimationFrame(callback) {
       callback();
     },
     __renderBodyClasses: [],
     setTimeout(callback, delay = 0) {
+      if (options.deferAnimationTimers && delay > 0 && delay < 1000) {
+        const timer = { callback, delay };
+        timers.push(timer);
+        return timer;
+      }
       if (delay >= 3000) {
         return { callback, delay };
       }
@@ -390,7 +406,21 @@ function createHarness(options = {}) {
     viewModeBtn: elementById('viewModeBtn', 'button')
   });
 
-  return { api, changeListeners, createdTabs, document, getCalls, removedTabs, setCalls, storage };
+  return {
+    api,
+    changeListeners,
+    consoleErrors,
+    createdTabs,
+    document,
+    getCalls,
+    removedTabs,
+    setCalls,
+    setGetError(error) {
+      getError = error || '';
+    },
+    storage,
+    timers
+  };
 }
 
 async function dispatchAndWait(element, event) {
@@ -830,6 +860,29 @@ async function main() {
   }
 
   {
+    const { api, changeListeners, setGetError } = createHarness();
+
+    api.init();
+    await Promise.resolve();
+    await Promise.resolve();
+    setGetError('Storage reload failed');
+
+    changeListeners.forEach(listener => listener({
+      [ReadLaterCore.STORAGE_KEY]: { oldValue: [], newValue: [] }
+    }, 'local'));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.strictEqual(
+      api.els.statusText.textContent,
+      'Storage reload failed',
+      'external storage reload failures should be visible in the popup'
+    );
+  }
+
+  {
     const { api, storage } = createHarness();
     storage[ReadLaterCore.STORAGE_KEY] = [
       null,
@@ -977,6 +1030,35 @@ async function main() {
     assert.strictEqual(api.els.addCurrentPageBtn.classList.contains('is-saved'), true);
     assert.strictEqual(api.els.addCurrentPageBtn.title, 'Remove current page');
     assert.strictEqual(api.els.addCurrentPageBtn.getAttribute('aria-label'), 'Remove current page from Read It Later');
+  }
+
+  {
+    const { api, timers } = createHarness({ deferAnimationTimers: true });
+    const tab = {
+      title: 'Fresh current page',
+      url: 'https://example.com/fresh-current'
+    };
+    const entry = ReadLaterCore.buildEntryFromTab(tab, Date.now());
+
+    api.state.entries = [entry];
+    api.state.currentTab = tab;
+    api.render();
+
+    const card = api.els.entriesList.querySelector(`[data-id="${entry.id}"]`);
+    assert.ok(card, 'fresh current page should render before removal');
+    assert.ok(/entryIn/.test(card.style.animation), 'fresh current page starts with the entryIn animation');
+
+    const removal = api.addCurrentPage();
+    await Promise.resolve();
+
+    assert.strictEqual(card.classList.contains('leaving'), true, 'top-right current-page removal should mark the card as leaving');
+    assert.strictEqual(card.style.animation || '', '', 'leaving should clear inline entryIn so CSS entryOut can run');
+    assert.ok(timers[0] && timers[0].delay >= 200, 'current-page removal should wait for the full entryOut duration before rendering');
+
+    timers.shift().callback();
+    await removal;
+
+    assert.deepStrictEqual(api.state.entries, []);
   }
 
   {

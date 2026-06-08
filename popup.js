@@ -27,6 +27,7 @@ const state = {
 const els = {};
 let statusTimer = null;
 const pendingStorageEchoes = new Map();
+const ENTRY_EXIT_ANIMATION_MS = 220;
 
 function byId(id) {
   return document.getElementById(id);
@@ -367,14 +368,12 @@ async function deleteSelectedEntries() {
   ).filter(Boolean);
 
   cards.forEach(card => {
-    if (!card.classList.contains('leaving')) {
-      card.classList.add('leaving');
-    }
+    markCardLeaving(card);
   });
 
   // Wait for animation
   if (cards.length > 0) {
-    await new Promise(resolve => setTimeout(resolve, 160));
+    await new Promise(resolve => setTimeout(resolve, ENTRY_EXIT_ANIMATION_MS));
   }
 
   try {
@@ -491,6 +490,15 @@ function syncCurrentTabEntry() {
   state.currentTabEntry = state.currentTab && ReadLaterCore.isSavableTab(state.currentTab)
     ? ReadLaterCore.findEntryByUrl(state.entries, state.currentTab.url)
     : null;
+}
+
+function markCardLeaving(card) {
+  if (!card || card.classList.contains('leaving')) {
+    return false;
+  }
+  card.style.animation = '';
+  card.classList.add('leaving');
+  return true;
 }
 
 async function refreshCurrentTabState(options = {}) {
@@ -618,10 +626,7 @@ async function removeEntry(entry) {
 
   const card = els.entriesList.querySelector(`[data-id="${CSS.escape(entry.id)}"]`);
   if (card) {
-    // Prevent double-deletion by checking if already leaving
-    if (card.classList.contains('leaving')) return;
-
-    card.classList.add('leaving');
+    if (!markCardLeaving(card)) return;
     await new Promise(resolve => {
       const onAnimationEnd = () => {
         card.removeEventListener('animationend', onAnimationEnd);
@@ -631,7 +636,7 @@ async function removeEntry(entry) {
       setTimeout(() => {
         card.removeEventListener('animationend', onAnimationEnd);
         resolve();
-      }, 160);
+      }, ENTRY_EXIT_ANIMATION_MS);
     });
   }
 
@@ -1537,6 +1542,7 @@ function init() {
     if (shouldReloadFromStorageChange(changes, areaName)) {
       loadEntries().catch((error) => {
         console.error('Failed to reload entries:', error);
+        setStatus(error && error.message ? error.message : 'Could not reload list');
       });
     }
   });

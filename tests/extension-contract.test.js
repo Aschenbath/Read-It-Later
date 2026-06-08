@@ -201,6 +201,14 @@ assert.ok(
     removeEntryBlock.indexOf('await persist(next.entries);') < removeEntryBlock.indexOf('state.selectedIds.delete(entry.id);'),
   'single-entry delete should preserve selection state until storage persistence succeeds'
 );
+assert.ok(
+  popupJs.includes('const ENTRY_EXIT_ANIMATION_MS = 220;') &&
+    popupJs.includes('function markCardLeaving') &&
+    popupJs.includes("card.style.animation = '';") &&
+    popupJs.includes('markCardLeaving(card)') &&
+    popupJs.includes('setTimeout(resolve, ENTRY_EXIT_ANIMATION_MS)'),
+  'entry deletion should clear fresh inline entryIn and wait for the full CSS entryOut animation'
+);
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
 assert.ok(
@@ -490,6 +498,11 @@ const storageChangedBlock = popupJs.match(/chrome\.storage\.onChanged\.addListen
 assert.ok(
   storageChangedBlock.includes('shouldReloadFromStorageChange(changes, areaName)'),
   'popup storage listener should delegate reload decisions through the storage echo guard'
+);
+assert.ok(
+  storageChangedBlock.includes('Failed to reload entries:') &&
+    storageChangedBlock.includes('setStatus('),
+  'popup storage reload failures should be visible to the user instead of console-only'
 );
 const shouldReloadBlock = popupJs.match(/function shouldReloadFromStorageChange\(changes, areaName\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
