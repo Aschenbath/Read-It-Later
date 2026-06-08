@@ -128,6 +128,10 @@ async function mergeSelectionToGroup(targetDomain) {
   });
 
   await persist(updatedEntries);
+
+  // Expand the newly created/updated group
+  state.expandedDomains.add(targetDomain);
+
   exitSelectionMode();
 }
 
