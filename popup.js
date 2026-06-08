@@ -800,6 +800,10 @@ function renderDomainGroup(group) {
     state.emptyGroupDeleteArmed.clear();
     const previousPositions = snapshotListPositions();
     const wasExpanded = state.expandedDomains.has(group.domain);
+
+    // Prevent clicks during animation
+    header.classList.add('is-animating');
+
     if (wasExpanded) {
       state.expandedDomains.delete(group.domain);
       persistExpandedDomains().catch((error) => {
@@ -808,6 +812,11 @@ function renderDomainGroup(group) {
       contentWrap.classList.remove('is-expanded');
       header.setAttribute('aria-expanded', 'false');
       animateListReflow(previousPositions, { exclude: container });
+
+      // Re-enable after collapse completes (450ms)
+      setTimeout(() => {
+        header.classList.remove('is-animating');
+      }, 450);
     } else {
       state.expandedDomains.add(group.domain);
       persistExpandedDomains().catch((error) => {
@@ -818,6 +827,11 @@ function renderDomainGroup(group) {
       contentWrap.offsetHeight;
       contentWrap.classList.add('is-expanded');
       animateListReflow(previousPositions, { exclude: container });
+
+      // Re-enable after expand completes (450ms container + 600ms last card)
+      setTimeout(() => {
+        header.classList.remove('is-animating');
+      }, 1050);
     }
   };
 

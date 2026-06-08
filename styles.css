@@ -1026,6 +1026,11 @@ h1 {
     border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+}
+
+.domain-group-header.is-animating {
+  pointer-events: none;
 }
 
 .domain-group-header:hover,
@@ -1106,7 +1111,7 @@ h1 {
   width: 20px;
   height: 20px;
   transform: translateY(-50%);
-  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .domain-group-chevron::before,
@@ -1259,10 +1264,12 @@ h1 {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: none;
 }
 
 .domain-group-content.is-expanded {
   max-height: 2000px;
+  pointer-events: auto;
 }
 
 .domain-group-entries {
@@ -1305,19 +1312,31 @@ h1 {
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(2) {
-  transition-delay: 0.36s;
+  transition-delay: 0.24s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(3) {
-  transition-delay: 0.6s;
+  transition-delay: 0.36s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
-  transition-delay: 0.84s;
+  transition-delay: 0.48s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(5) {
-  transition-delay: 1.08s;
+  transition-delay: 0.6s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(6) {
+  transition-delay: 0.72s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(7) {
+  transition-delay: 0.84s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(8) {
+  transition-delay: 0.96s;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
@@ -1334,6 +1353,37 @@ h1 {
     0 3px 8px rgba(52, 48, 39, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     inset 0 -1px 0 rgba(79, 155, 133, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .entry-card {
+    animation: none !important;
+  }
+
+  .domain-group-content {
+    transition: none !important;
+  }
+
+  .domain-group-entries,
+  .domain-group-entries .entry-card {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .domain-group-content.is-expanded .domain-group-entries,
+  .domain-group-content.is-expanded .domain-group-entries .entry-card {
+    transition-delay: 0s !important;
+  }
 }
 
 @media (max-width: 420px) {
