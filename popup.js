@@ -13,6 +13,7 @@ const state = {
   currentTab: null,
   currentTabEntry: null,
   expandedDomains: new Set(),
+  emptyGroupDeleteArmed: new Set(),
   customGroups: [],
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
@@ -199,38 +200,49 @@ async function deleteSelectedEntries() {
   document.body.classList.remove('selection-mode');
 }
 
-async function mergeSelectionToGroup(targetDomain, options = {}) {
-  if (state.selectedIds.size === 0) return;
+async function commitSelectionToGroup(targetDomain) {
+  const groupName = ReadLaterCore.cleanText(targetDomain);
+  if (!groupName) return false;
 
-  // Update domain for selected entries
+  const selectedIds = new Set(state.selectedIds);
+  if (selectedIds.size === 0) {
+    return false;
+  }
+
+  let movedCount = 0;
   const updatedEntries = state.entries.map(entry => {
-    if (state.selectedIds.has(entry.id)) {
-      return { ...entry, domain: targetDomain };
+    if (!selectedIds.has(entry.id)) {
+      return entry;
     }
-    return entry;
+    movedCount += 1;
+    return { ...entry, domain: groupName };
   });
 
-  if (state.selectionMode) {
-    state.expandedDomains.delete(targetDomain);
-  } else {
-    state.expandedDomains.add(targetDomain);
-  }
-  persistExpandedDomains().catch((error) => {
-    setStatus(error && error.message ? error.message : 'Could not save group state');
-  });
-
-  // Hide the create-group input
   state.showCreateGroup = false;
+  state.selectionMode = false;
+  state.selectedIds.clear();
+  state.emptyGroupDeleteArmed.delete(groupName);
+  document.body.classList.remove('selection-mode');
 
-  // Clear selection before persist if requested (for atomic exit)
-  if (options.clearSelection) {
-    state.selectionMode = false;
-    state.selectedIds.clear();
-    document.body.classList.remove('selection-mode');
+  if (movedCount === 0) {
+    setStatus('Select pages before creating a group');
+    render();
+    return false;
   }
 
-  // Persist will call render() with the updated state
-  await persist(updatedEntries);
+  if (!state.customGroups.includes(groupName)) {
+    state.customGroups = [...state.customGroups, groupName];
+  }
+  state.expandedDomains.delete(groupName);
+  state.entries = ReadLaterCore.sortEntriesForDisplay(updatedEntries);
+
+  await chromeSet({
+    [storageKey]: state.entries,
+    [customGroupsStorageKey]: state.customGroups,
+    [expandedDomainsStorageKey]: Array.from(state.expandedDomains)
+  });
+  render();
+  return true;
 }
 
 async function createCustomGroup(groupName) {
@@ -259,28 +271,6 @@ async function removeCustomGroup(groupName) {
     persistExpandedDomains()
   ]);
   render();
-}
-
-async function createGroupFromSelection() {
-  if (state.selectedIds.size === 0) return;
-
-  const groupName = prompt('Enter group name:', '');
-  if (!groupName || !groupName.trim()) {
-    return;
-  }
-
-  const trimmedName = groupName.trim();
-
-  // Update domain for selected entries
-  const updatedEntries = state.entries.map(entry => {
-    if (state.selectedIds.has(entry.id)) {
-      return { ...entry, domain: trimmedName };
-    }
-    return entry;
-  });
-
-  await persist(updatedEntries);
-  exitSelectionMode();
 }
 
 function syncCurrentTabEntry() {
@@ -421,11 +411,13 @@ function renderEntry(entry) {
   // Long press detection
   let longPressTimer = null;
   let touchMoved = false;
+  let suppressNextClickAfterLongPress = false;
 
   const startLongPress = (e) => {
     if (state.selectionMode) return;
     touchMoved = false;
     longPressTimer = setTimeout(() => {
+      suppressNextClickAfterLongPress = true;
       enterSelectionMode();
       toggleSelection(entry.id);
     }, 500);
@@ -451,6 +443,11 @@ function renderEntry(entry) {
   openButton.addEventListener('touchmove', handleMove, { passive: true });
 
   openButton.addEventListener('click', (e) => {
+    if (suppressNextClickAfterLongPress) {
+      e.preventDefault();
+      suppressNextClickAfterLongPress = false;
+      return;
+    }
     if (state.selectionMode) {
       e.preventDefault();
       toggleSelection(entry.id);
@@ -536,13 +533,7 @@ function renderCreateGroupItem() {
         const targetDomain = ReadLaterCore.cleanText(groupName);
 
         if (state.selectionMode && state.selectedIds.size > 0) {
-          // In selection mode with selected entries: create group + merge + exit selection
-          if (targetDomain && !state.customGroups.includes(targetDomain)) {
-            state.customGroups = [...state.customGroups, targetDomain];
-            await persistCustomGroups();
-          }
-          // Merge and clear selection atomically
-          await mergeSelectionToGroup(targetDomain, { clearSelection: true });
+          await commitSelectionToGroup(targetDomain);
         } else {
           // No selection: just create empty group as drop target
           await createCustomGroup(groupName);
@@ -581,9 +572,10 @@ function renderDomainGroup(group) {
 
   const isExpanded = state.expandedDomains.has(group.domain);
 
-  const header = document.createElement('button');
+  const header = document.createElement('div');
   header.className = 'domain-group-header';
-  header.type = 'button';
+  header.setAttribute('role', 'button');
+  header.tabIndex = 0;
   header.setAttribute('aria-label', `${group.count} pages from ${group.domain}`);
   header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
 
@@ -612,12 +604,12 @@ function renderDomainGroup(group) {
   chevron.style.cursor = 'pointer';
   header.appendChild(chevron);
 
-  // Chevron click: expand/collapse or delete empty group
+  // Empty groups do not expand. Their chevron is a two-click remove affordance.
   chevron.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent header click
+    if (group.count > 0) return;
+    e.stopPropagation();
 
-    const wasExpanded = state.expandedDomains.has(group.domain);
-    // Empty custom group: first click expands, second click (when expanded) deletes
+    const wasExpanded = state.emptyGroupDeleteArmed.has(group.domain);
     if (group.count === 0 && wasExpanded) {
       removeCustomGroup(group.domain).catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not remove group');
@@ -625,37 +617,8 @@ function renderDomainGroup(group) {
       return;
     }
 
-    if (wasExpanded) {
-      state.expandedDomains.delete(group.domain);
-      persistExpandedDomains().catch((error) => {
-        setStatus(error && error.message ? error.message : 'Could not save group state');
-      });
-      header.setAttribute('aria-expanded', 'false');
-      contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
-      requestAnimationFrame(() => {
-        contentWrap.style.maxHeight = '0';
-        contentWrap.style.opacity = '0';
-      });
-      setTimeout(() => {
-        contentWrap.style.display = 'none';
-      }, 320);
-    } else {
-      state.expandedDomains.add(group.domain);
-      persistExpandedDomains().catch((error) => {
-        setStatus(error && error.message ? error.message : 'Could not save group state');
-      });
-      header.setAttribute('aria-expanded', 'true');
-      contentWrap.style.display = 'block';
-      contentWrap.style.maxHeight = '0';
-      contentWrap.style.opacity = '0';
-      requestAnimationFrame(() => {
-        contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
-        contentWrap.style.opacity = '1';
-      });
-      setTimeout(() => {
-        contentWrap.style.maxHeight = 'none';
-      }, 320);
-    }
+    state.emptyGroupDeleteArmed.add(group.domain);
+    header.classList.add('is-delete-armed');
   });
 
   // Quick actions for the group (only show for non-empty groups)
@@ -742,6 +705,61 @@ function renderDomainGroup(group) {
     contentWrap.style.display = 'none';
   }
 
+  const toggleExpansion = () => {
+    if (group.count === 0) return;
+
+    state.emptyGroupDeleteArmed.clear();
+    const wasExpanded = state.expandedDomains.has(group.domain);
+    if (wasExpanded) {
+      state.expandedDomains.delete(group.domain);
+      persistExpandedDomains().catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not save group state');
+      });
+      header.setAttribute('aria-expanded', 'false');
+      contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        contentWrap.style.maxHeight = '0';
+        contentWrap.style.opacity = '0';
+      });
+      setTimeout(() => {
+        contentWrap.style.display = 'none';
+      }, 320);
+    } else {
+      state.expandedDomains.add(group.domain);
+      persistExpandedDomains().catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not save group state');
+      });
+      header.setAttribute('aria-expanded', 'true');
+      contentWrap.style.display = 'block';
+      contentWrap.style.maxHeight = '0';
+      contentWrap.style.opacity = '0';
+      requestAnimationFrame(() => {
+        contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
+        contentWrap.style.opacity = '1';
+      });
+      setTimeout(() => {
+        contentWrap.style.maxHeight = 'none';
+      }, 320);
+    }
+  };
+
+  header.addEventListener('click', (e) => {
+    if (e.target.closest('.domain-group-actions')) {
+      return;
+    }
+    if (group.count === 0) return;
+    toggleExpansion();
+  });
+
+  header.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') {
+      return;
+    }
+    if (group.count === 0) return;
+    e.preventDefault();
+    toggleExpansion();
+  });
+
   const content = document.createElement('div');
   content.className = 'domain-group-entries';
   group.entries.forEach((entry, index) => {
@@ -771,7 +789,7 @@ function renderDomainGroup(group) {
     e.preventDefault();
     header.classList.remove('is-drag-over');
     if (state.selectionMode && state.selectedIds.size > 0) {
-      await mergeSelectionToGroup(group.domain);
+      await commitSelectionToGroup(group.domain);
     }
   });
 

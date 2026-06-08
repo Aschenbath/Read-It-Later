@@ -75,6 +75,12 @@ assert.deepStrictEqual(normalizeEntry({
   updatedAt: 2
 });
 
+assert.strictEqual(normalizeEntry({
+  title: 'Manual group entry',
+  url: 'https://linux.do/t/topic/123',
+  domain: '小技巧'
+}, now).domain, '小技巧');
+
 const existing = [
   buildEntryFromTab({ title: 'Old title', url: 'https://example.com/post#old' }, now - 1000),
   buildEntryFromTab({ title: 'Other', url: 'https://other.example/path' }, now - 2000)
@@ -96,6 +102,19 @@ assert.deepStrictEqual(upserted.entries.map(entry => entry.title), ['New title',
 assert.strictEqual(upserted.entries[0].createdAt, now - 1000);
 assert.strictEqual(upserted.entries[0].updatedAt, now + 1000);
 assert.strictEqual(upserted.entries[0].favIconUrl, 'https://example.com/icon.png');
+
+const manuallyGrouped = [
+  {
+    ...buildEntryFromTab({ title: 'Linux tip', url: 'https://linux.do/t/topic/123' }, now - 1000),
+    domain: '小技巧'
+  }
+];
+const regroupedUpsert = upsertEntry(manuallyGrouped, buildEntryFromTab({
+  title: 'Linux tip updated',
+  url: 'https://linux.do/t/topic/123#reply-1'
+}, now + 1000));
+assert.strictEqual(regroupedUpsert.entries[0].domain, '小技巧');
+assert.strictEqual(regroupedUpsert.entries[0].title, 'Linux tip updated');
 
 const inserted = upsertEntry(existing, buildEntryFromTab({
   title: 'Fresh',

@@ -69,9 +69,20 @@ assert.ok(popupJs.includes("els.emptyActionBtn.dataset.action = hasNoMatches ? '
 assert.ok(popupJs.includes("els.clearSearchBtn.addEventListener('click'"), 'search should have a one-click clear control');
 const enterSelectionModeBlock = popupJs.match(/function enterSelectionMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(!enterSelectionModeBlock.includes('render();'), 'long-press selection should not render an empty selection state before selecting the pressed entry');
-const mergeSelectionToGroupBlock = popupJs.match(/async function mergeSelectionToGroup\(targetDomain\) \{[\s\S]*?\n\}/)?.[0] || '';
-assert.ok(!mergeSelectionToGroupBlock.includes('state.selectedIds.clear();'), 'creating a group should keep the selected entries selected for continued classification');
-assert.ok(!mergeSelectionToGroupBlock.includes('state.selectionMode = false'), 'creating a group should not return to normal mode');
+assert.ok(
+  popupJs.includes('async function commitSelectionToGroup'),
+  'selection grouping should use one atomic transaction for create/move/exit'
+);
+assert.ok(
+  popupJs.includes('const selectedIds = new Set(state.selectedIds);'),
+  'selection grouping should snapshot selected ids before any async storage write'
+);
+assert.ok(
+  popupJs.includes('state.selectionMode = false;') &&
+  popupJs.includes('state.selectedIds.clear();') &&
+  popupJs.includes("document.body.classList.remove('selection-mode');"),
+  'creating or dropping into a group should move selected entries and return to normal mode'
+);
 assert.ok(
   popupJs.includes('if (state.selectionMode && state.selectedIds.size === 0)') &&
   popupJs.includes('exitSelectionMode();'),
@@ -92,6 +103,7 @@ assert.ok(popupJs.includes("event.key === 'ArrowUp'"), 'keyboard navigation shou
 assert.ok(popupJs.includes("event.key === 'Delete'"), 'keyboard navigation should support Delete on focused entries');
 assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry open action should be separated from delete action');
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
+assert.ok(popupJs.includes('suppressNextClickAfterLongPress'), 'long press selection should not be immediately undone by the follow-up click event');
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
 assert.ok(
@@ -110,8 +122,9 @@ assert.ok(popupJs.includes('state.customGroups ='), 'user-created groups should 
 assert.ok(popupJs.includes('function persistExpandedDomains'), 'expanded/collapsed group state should be persisted after toggles');
 assert.ok(popupJs.includes('function persistViewMode'), 'grouped/flat view choice should be persisted after toggles');
 assert.ok(popupJs.includes('function persistCustomGroups'), 'user-created groups should be persisted after creation');
-assert.ok(popupJs.includes('async function createCustomGroup'), 'create-group input should create a visible group/drop target first');
-assert.ok(popupJs.includes('await createCustomGroup(groupName);'), 'pressing Enter in create-group input should show a new group, not silently merge selected entries');
+assert.ok(popupJs.includes('async function createCustomGroup'), 'create-group input should still support creating an empty group when nothing is selected');
+assert.ok(popupJs.includes('await commitSelectionToGroup(targetDomain);'), 'pressing Enter with selected entries should move them into the new group immediately');
+assert.ok(!popupJs.includes('prompt('), 'manual grouping should use the inline create-group input, not a browser prompt');
 assert.ok(
   popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, state.customGroups)'),
   'group rendering should include empty user-created groups as drop targets'
@@ -134,11 +147,23 @@ assert.ok(
 );
 assert.ok(
   popupJs.includes('group.count === 0 && wasExpanded'),
-  'clicking an already-expanded empty group should delete it (works in both normal and selection mode)'
+  'empty group deletion should be explicitly guarded by its empty count'
 );
 assert.ok(
-  /if\s*\(\s*state\.selectionMode\s*\)\s*{\s*state\.expandedDomains\.delete\(targetDomain\);/.test(popupJs),
-  'moving selected entries into a group should keep that group compact in selection/classification mode'
+  popupJs.includes('state.emptyGroupDeleteArmed'),
+  'empty groups should use a chevron-only two-click delete arm instead of expanding empty content'
+);
+assert.ok(
+  popupJs.includes("header.addEventListener('click'"),
+  'non-empty group headers should toggle when clicked anywhere on the header'
+);
+assert.ok(
+  popupJs.includes('if (group.count === 0) return;'),
+  'empty group header body clicks should not expand or delete the group'
+);
+assert.ok(
+  popupJs.includes('await commitSelectionToGroup(group.domain);'),
+  'dropping selected entries onto an existing group should move them and return to normal mode'
 );
 assert.ok(
   popupJs.includes('function makeIcon(entry = {})'),

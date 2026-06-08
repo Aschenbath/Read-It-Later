@@ -60,7 +60,8 @@ function isSafeIconUrl(value) {
 function normalizeEntry(entry, now = Date.now()) {
   const source = entry || {};
   const url = normalizeUrl(source.url);
-  const domain = domainFromUrl(url);
+  const sourceDomain = cleanText(source.domain);
+  const domain = sourceDomain || domainFromUrl(url);
   const title = cleanText(source.title) || url || 'Untitled';
   const createdAt = Number.isFinite(Number(source.createdAt)) ? Number(source.createdAt) : now;
   const updatedAt = Number.isFinite(Number(source.updatedAt)) ? Number(source.updatedAt) : now;
