@@ -477,6 +477,45 @@ async function main() {
   }
 
   {
+    const { api } = createHarness();
+    api.state.customGroups = ['Empty'];
+    const emptyNode = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Empty',
+      entries: [],
+      count: 0
+    });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Grouped page',
+      url: 'https://docs.example/read'
+    }, 1000);
+    const docsNode = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries: [entry],
+      count: 1
+    });
+    api.els.entriesList.replaceChildren(emptyNode, docsNode);
+
+    const emptyHeader = emptyNode.querySelector('.domain-group-header');
+    const emptyChevron = emptyNode.querySelector('.domain-group-chevron');
+    const docsHeader = docsNode.querySelector('.domain-group-header');
+
+    emptyChevron.click();
+
+    assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Empty'), true);
+    assert.strictEqual(emptyHeader.classList.contains('is-delete-armed'), true);
+    assert.strictEqual(emptyChevron.getAttribute('aria-label'), 'Confirm remove empty group Empty');
+
+    docsHeader.click();
+
+    assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Empty'), false);
+    assert.strictEqual(emptyHeader.classList.contains('is-delete-armed'), false);
+    assert.strictEqual(emptyChevron.title, 'Remove empty group Empty');
+    assert.strictEqual(emptyChevron.getAttribute('aria-label'), 'Remove empty group Empty');
+  }
+
+  {
     const { api, getCalls } = createHarness();
 
     api.init();

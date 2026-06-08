@@ -437,6 +437,34 @@ function openEntry(entry) {
   }
 }
 
+function setEmptyGroupChevronLabel(chevron, domain, isConfirming) {
+  if (!chevron || !domain) return;
+  const label = isConfirming
+    ? `Confirm remove empty group ${domain}`
+    : `Remove empty group ${domain}`;
+  chevron.title = label;
+  chevron.setAttribute('aria-label', label);
+}
+
+function clearEmptyGroupDeleteArming() {
+  state.emptyGroupDeleteArmed.clear();
+  if (!els.entriesList || typeof els.entriesList.querySelectorAll !== 'function') return;
+
+  Array.from(els.entriesList.querySelectorAll('.domain-group-header')).forEach((header) => {
+    if (!header.classList || !header.classList.contains('is-delete-armed')) return;
+
+    header.classList.remove('is-delete-armed');
+    const container = typeof header.closest === 'function'
+      ? header.closest('.domain-group')
+      : null;
+    const domain = container && container.dataset ? container.dataset.domain : '';
+    const chevron = typeof header.querySelector === 'function'
+      ? header.querySelector('.domain-group-chevron')
+      : null;
+    setEmptyGroupChevronLabel(chevron, domain, false);
+  });
+}
+
 function snapshotListPositions() {
   const positions = new Map();
   if (!els.entriesList || typeof els.entriesList.querySelectorAll !== 'function') {
@@ -775,14 +803,6 @@ function renderDomainGroup(group) {
   header.appendChild(chevron);
 
   // Empty groups do not expand. Their chevron is a two-click remove affordance.
-  const setEmptyGroupRemovalLabel = (isConfirming) => {
-    const label = isConfirming
-      ? `Confirm remove empty group ${group.domain}`
-      : `Remove empty group ${group.domain}`;
-    chevron.title = label;
-    chevron.setAttribute('aria-label', label);
-  };
-
   const activateEmptyGroupRemoval = (e) => {
     if (group.count > 0) return;
     e.preventDefault();
@@ -798,13 +818,13 @@ function renderDomainGroup(group) {
 
     state.emptyGroupDeleteArmed.add(group.domain);
     header.classList.add('is-delete-armed');
-    setEmptyGroupRemovalLabel(true);
+    setEmptyGroupChevronLabel(chevron, group.domain, true);
   };
 
   if (group.count === 0) {
     chevron.setAttribute('role', 'button');
     chevron.tabIndex = 0;
-    setEmptyGroupRemovalLabel(state.emptyGroupDeleteArmed.has(group.domain));
+    setEmptyGroupChevronLabel(chevron, group.domain, state.emptyGroupDeleteArmed.has(group.domain));
   }
 
   chevron.addEventListener('click', activateEmptyGroupRemoval);
@@ -918,7 +938,7 @@ function renderDomainGroup(group) {
   const toggleExpansion = () => {
     if (group.count === 0) return;
 
-    state.emptyGroupDeleteArmed.clear();
+    clearEmptyGroupDeleteArming();
     const previousPositions = snapshotListPositions();
     const wasExpanded = state.expandedDomains.has(group.domain);
 
