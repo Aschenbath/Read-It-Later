@@ -72,6 +72,13 @@ const backgroundJs = read('background.js');
   'ReadLaterCore.filterEntries',
   'chrome.tabs.create'
 ].forEach(fragment => assert.ok(popupJs.includes(fragment), `missing ${fragment}`));
+const currentTabBlock = popupJs.match(/function currentTab\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  currentTabBlock.includes('chrome.runtime') &&
+    currentTabBlock.includes('lastError') &&
+    currentTabBlock.includes('reject(new Error'),
+  'currentTab() should surface chrome.tabs.query runtime.lastError instead of treating failures as no active tab'
+);
 assert.ok(!popupJs.includes('innerHTML = entry.title'));
 assert.ok(!popupJs.includes('innerHTML = entry.domain'));
 assert.ok(popupJs.includes('function renderEmptyState'), 'popup should render an empty-state that changes for empty list vs no matches');

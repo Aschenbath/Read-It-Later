@@ -168,8 +168,13 @@ function shouldReloadFromStorageChange(changes, areaName) {
 }
 
 function currentTab() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const err = chrome.runtime && chrome.runtime.lastError;
+      if (err) {
+        reject(new Error(err.message || String(err)));
+        return;
+      }
       resolve((tabs || [])[0] || null);
     });
   });
@@ -230,8 +235,18 @@ async function loadEntries() {
     : [];
   state.viewMode = result[viewModeStorageKey] === 'grouped' ? 'grouped' : 'flat';
 
-  await refreshCurrentTabState({ render: false, force: true });
+  let currentTabError = null;
+  try {
+    await refreshCurrentTabState({ render: false, force: true });
+  } catch (error) {
+    currentTabError = error;
+    state.currentTab = null;
+    syncCurrentTabEntry();
+  }
   render();
+  if (currentTabError) {
+    setStatus(currentTabError.message || 'Could not detect current tab');
+  }
 }
 
 async function persist(entries) {

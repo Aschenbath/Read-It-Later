@@ -256,6 +256,7 @@ function createHarness(options = {}) {
   const activeTab = options.tab || null;
   const getError = options.getError || '';
   const setError = options.setError || '';
+  const queryError = options.queryError || '';
   const createResults = Array.isArray(options.createResults) ? [...options.createResults] : [];
   const removeFailures = new Set(options.removeFailures || []);
   const removeFailureMessages = options.removeFailureMessages || {};
@@ -314,6 +315,12 @@ function createHarness(options = {}) {
       },
       tabs: {
         query(query, callback) {
+          if (queryError) {
+            context.chrome.runtime.lastError = { message: queryError };
+            callback(undefined);
+            context.chrome.runtime.lastError = null;
+            return;
+          }
           callback(activeTab ? [activeTab] : []);
         },
         async create(args) {
@@ -349,7 +356,10 @@ function createHarness(options = {}) {
       callback();
     },
     __renderBodyClasses: [],
-    setTimeout(callback) {
+    setTimeout(callback, delay = 0) {
+      if (delay >= 3000) {
+        return { callback, delay };
+      }
       return callback();
     }
   };
@@ -862,6 +872,31 @@ async function main() {
   }
 
   {
+    const { api, storage } = createHarness({ queryError: 'Cannot access active tab' });
+    storage[ReadLaterCore.STORAGE_KEY] = [
+      ReadLaterCore.buildEntryFromTab({
+        title: 'Saved without active tab',
+        url: 'https://docs.example/saved'
+      }, 1000)
+    ];
+
+    await api.loadEntries();
+
+    assert.deepStrictEqual(
+      api.state.entries.map(entry => entry.url),
+      ['https://docs.example/saved'],
+      'startup active-tab query failures should not block saved entries from loading'
+    );
+    assert.strictEqual(api.state.currentTab, null);
+    assert.strictEqual(api.state.currentTabEntry, null);
+    assert.strictEqual(
+      api.els.statusText.textContent,
+      'Cannot access active tab',
+      'startup active-tab query failures should still surface the Chrome runtime error'
+    );
+  }
+
+  {
     const { api, storage } = createHarness({
       tab: {
         title: 'Brave Settings',
@@ -877,6 +912,20 @@ async function main() {
     assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].title, 'Brave Settings');
     assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].url, 'brave://settings');
     assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].domain, 'brave://settings');
+  }
+
+  {
+    const { api } = createHarness({ queryError: 'Cannot access active tab' });
+
+    await api.addCurrentPage();
+
+    assert.strictEqual(
+      api.els.statusText.textContent,
+      'Cannot access active tab',
+      'current tab query failures should surface the Chrome runtime error'
+    );
+    assert.strictEqual(api.state.currentTab, null);
+    assert.strictEqual(api.state.entries.length, 0);
   }
 
   {
