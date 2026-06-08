@@ -44,6 +44,8 @@ assert.ok(html.includes('<script src="popup.js"></script>'));
   'emptyCopy',
   'searchInput',
   'clearSearchBtn',
+  'deleteSelectedBtn',
+  'viewModeBtn',
   'entriesList',
   'emptyState',
   'emptyTitle',
@@ -51,6 +53,8 @@ assert.ok(html.includes('<script src="popup.js"></script>'));
 ].forEach(id => assert.ok(html.includes(`id="${id}"`), `missing #${id}`));
 assert.strictEqual((html.match(/<script/g) || []).length, 2);
 assert.ok(html.includes('role="list"'), 'entries list should expose list semantics');
+assert.ok(!html.includes('\u9983'), 'popup HTML should not expose mojibake glyphs');
+assert.ok(html.includes('class="delete-selected-icon"'), 'bulk delete should use a styled icon span instead of a text glyph');
 
 const popupJs = read('popup.js');
 [
@@ -74,8 +78,22 @@ assert.ok(
   'selection grouping should use one atomic transaction for create/move/exit'
 );
 assert.ok(
-  popupJs.includes('const selectedIds = new Set(state.selectedIds);'),
+  popupJs.includes('const selectedIds = options.selectedIds') &&
+  popupJs.includes(': new Set(state.selectedIds);'),
   'selection grouping should snapshot selected ids before any async storage write'
+);
+assert.ok(
+  popupJs.includes('pendingGroupSelectedIds'),
+  'inline create-group flow should keep a frozen selected-id snapshot while the user types'
+);
+assert.ok(
+  popupJs.includes('state.pendingGroupSelectedIds = Array.from(state.selectedIds);'),
+  'clicking the selection-mode add button should snapshot selected ids before rendering the create-group input'
+);
+assert.ok(
+  popupJs.includes('const selectedIds = options.selectedIds') &&
+  popupJs.includes('await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });'),
+  'create-group Enter should commit the frozen selected-id snapshot instead of rereading live selection state'
 );
 assert.ok(
   popupJs.includes('state.selectionMode = false;') &&
@@ -98,12 +116,30 @@ assert.ok(popupJs.includes("meta.className = 'entry-meta'"), 'entry cards should
 assert.ok(popupJs.includes('state.currentTabEntry'), 'popup should track the saved entry for the current tab');
 assert.ok(popupJs.includes('function refreshCurrentTabState'), 'popup should refresh current-tab save state');
 assert.ok(popupJs.includes('function renderAddButtonState'), 'add button should reflect current-tab save state');
+assert.ok(popupJs.includes('function normalizeOpenedDomainTabs'), 'persisted batch-open tab state should be normalized before use');
+assert.ok(
+  popupJs.includes('filter(tabId => Number.isInteger(tabId))'),
+  'persisted batch-open tab ids should keep only integer tab ids'
+);
+assert.ok(
+  popupJs.includes('if (tab && Number.isInteger(tab.id))'),
+  'batch open should store only real tab ids returned by chrome.tabs.create'
+);
+assert.ok(!popupJs.includes('console.log('), 'popup should not leave debug logging in normal interaction paths');
 assert.ok(popupJs.includes("event.key === 'ArrowDown'"), 'keyboard navigation should support ArrowDown');
 assert.ok(popupJs.includes("event.key === 'ArrowUp'"), 'keyboard navigation should support ArrowUp');
 assert.ok(popupJs.includes("event.key === 'Delete'"), 'keyboard navigation should support Delete on focused entries');
 assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry open action should be separated from delete action');
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
 assert.ok(popupJs.includes('suppressNextClickAfterLongPress'), 'long press selection should not be immediately undone by the follow-up click event');
+assert.ok(!popupJs.includes('entry.timestamp'), 'entry insertion animation should use stored created/updated timestamps, not a missing timestamp field');
+const deleteSelectedBlock = popupJs.match(/async function deleteSelectedEntries\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  deleteSelectedBlock.includes('state.selectionMode = false;') &&
+  deleteSelectedBlock.includes('await persist(newEntries);') &&
+  deleteSelectedBlock.indexOf('state.selectionMode = false;') < deleteSelectedBlock.indexOf('await persist(newEntries);'),
+  'bulk delete should clear selection mode before persist triggers render'
+);
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
 assert.ok(
@@ -123,8 +159,10 @@ assert.ok(popupJs.includes('function persistExpandedDomains'), 'expanded/collaps
 assert.ok(popupJs.includes('function persistViewMode'), 'grouped/flat view choice should be persisted after toggles');
 assert.ok(popupJs.includes('function persistCustomGroups'), 'user-created groups should be persisted after creation');
 assert.ok(popupJs.includes('async function createCustomGroup'), 'create-group input should still support creating an empty group when nothing is selected');
-assert.ok(popupJs.includes('await commitSelectionToGroup(targetDomain);'), 'pressing Enter with selected entries should move them into the new group immediately');
+assert.ok(popupJs.includes('await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });'), 'pressing Enter with selected entries should move them into the new group immediately');
 assert.ok(!popupJs.includes('prompt('), 'manual grouping should use the inline create-group input, not a browser prompt');
+const createCustomGroupBlock = popupJs.match(/async function createCustomGroup\(groupName\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(!createCustomGroupBlock.includes('state.expandedDomains.add(targetDomain);'), 'empty custom group creation should not persist an expanded empty panel');
 assert.ok(
   popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, state.customGroups)'),
   'group rendering should include empty user-created groups as drop targets'
@@ -194,6 +232,8 @@ assert.ok(css.includes('.entry-meta'), 'entry metadata should be styled for fast
 assert.ok(css.includes('.entry-card.is-current-tab'), 'current tab entry should have a distinct visual state');
 assert.ok(css.includes('.add-button.is-saved'), 'add button should have a distinct saved state');
 assert.ok(css.includes('.undo-button'), 'undo affordance should be styled');
+assert.ok(css.includes('.delete-selected-icon'), 'bulk delete button should use a CSS-drawn icon');
+assert.ok(css.includes('.domain-group-header.is-delete-armed'), 'empty group delete arm state should have visible feedback');
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
 assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');
@@ -208,4 +248,5 @@ assert.ok(!icon.includes('<rect x="82" y="61" width="24"'), 'old plus-only icon 
 
 assert.ok(popupJs.includes("delIcon.className = 'delete-icon'"), 'delete button should use a styled icon span');
 assert.ok(!popupJs.includes('del.textContent'), 'delete button should not depend on a text glyph');
+assert.ok(!html.includes('🗑'), 'bulk delete button should not depend on an emoji glyph');
 assert.ok(popupJs.includes("del.setAttribute('aria-label'"), 'delete button should keep an accessible label');

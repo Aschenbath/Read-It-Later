@@ -159,3 +159,9 @@ const customGroupWithOneEntry = groupEntriesByDomain([
 assert.strictEqual(customGroupWithOneEntry[0].type, 'group');
 assert.strictEqual(customGroupWithOneEntry[0].domain, 'Research');
 assert.strictEqual(customGroupWithOneEntry[0].count, 1);
+
+const manuallyGroupedSearchable = [
+  { ...buildEntryFromTab({ title: 'Linux tip', url: 'https://linux.do/t/topic/123' }, now), domain: '小技巧' }
+];
+assert.deepStrictEqual(filterEntries(manuallyGroupedSearchable, '@linux').map(entry => entry.title), ['Linux tip']);
+assert.deepStrictEqual(filterEntries(manuallyGroupedSearchable, '@小技巧').map(entry => entry.title), ['Linux tip']);

@@ -178,8 +178,11 @@ function filterEntries(entries, query) {
   return list.filter((entry) => {
     // Domain filter check
     if (domainFilter) {
-      const entryDomain = String(entry && entry.domain || '').toLowerCase();
-      if (!entryDomain.includes(domainFilter)) {
+      const entryDomains = [
+        entry && entry.domain,
+        entry && domainFromUrl(entry.url)
+      ].map(value => String(value || '').toLowerCase());
+      if (!entryDomains.some(domain => domain.includes(domainFilter))) {
         return false;
       }
     }
@@ -189,6 +192,7 @@ function filterEntries(entries, query) {
       const text = [
         entry && entry.title,
         entry && entry.domain,
+        entry && domainFromUrl(entry.url),
         entry && entry.url
       ].map(value => String(value || '').toLowerCase()).join(' ');
       return text.includes(textQueryLower);

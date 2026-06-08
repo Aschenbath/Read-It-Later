@@ -18,6 +18,7 @@ const state = {
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
   selectedIds: new Set(),
+  pendingGroupSelectedIds: [],
   showCreateGroup: false,
   viewMode: 'flat' // 'grouped' or 'flat'
 };
@@ -82,6 +83,24 @@ function currentTab() {
   });
 }
 
+function normalizeOpenedDomainTabs(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return new Map();
+  }
+
+  const normalized = new Map();
+  Object.entries(value).forEach(([domain, tabIds]) => {
+    const cleanDomain = ReadLaterCore.cleanText(domain);
+    const cleanTabIds = Array.isArray(tabIds)
+      ? tabIds.map(tabId => Number(tabId)).filter(tabId => Number.isInteger(tabId))
+      : [];
+    if (cleanDomain && cleanTabIds.length > 0) {
+      normalized.set(cleanDomain, cleanTabIds);
+    }
+  });
+  return normalized;
+}
+
 async function loadEntries() {
   const result = await chromeGet({
     [storageKey]: [],
@@ -95,7 +114,7 @@ async function loadEntries() {
 
   // Restore opened domain tabs state
   const savedOpenedTabs = result.openedDomainTabs || {};
-  state.openedDomainTabs = new Map(Object.entries(savedOpenedTabs));
+  state.openedDomainTabs = normalizeOpenedDomainTabs(savedOpenedTabs);
   const savedExpandedDomains = Array.isArray(result[expandedDomainsStorageKey])
     ? result[expandedDomainsStorageKey]
     : [];
@@ -135,6 +154,7 @@ async function persistCustomGroups() {
 function enterSelectionMode() {
   state.selectionMode = true;
   state.selectedIds.clear();
+  state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
   document.body.classList.add('selection-mode');
 }
@@ -142,6 +162,7 @@ function enterSelectionMode() {
 function exitSelectionMode() {
   state.selectionMode = false;
   state.selectedIds.clear();
+  state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
   document.body.classList.remove('selection-mode');
   render();
@@ -161,6 +182,9 @@ function toggleSelection(entryId) {
     state.selectedIds.delete(entryId);
   } else {
     state.selectedIds.add(entryId);
+  }
+  if (state.selectionMode && state.showCreateGroup) {
+    state.pendingGroupSelectedIds = Array.from(state.selectedIds);
   }
   if (state.selectionMode && state.selectedIds.size === 0) {
     exitSelectionMode();
@@ -191,20 +215,22 @@ async function deleteSelectedEntries() {
     await new Promise(resolve => setTimeout(resolve, 160));
   }
 
-  await persist(newEntries);
-
-  // Exit selection mode after deletion
   state.selectionMode = false;
   state.selectedIds.clear();
+  state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
   document.body.classList.remove('selection-mode');
+
+  await persist(newEntries);
 }
 
-async function commitSelectionToGroup(targetDomain) {
+async function commitSelectionToGroup(targetDomain, options = {}) {
   const groupName = ReadLaterCore.cleanText(targetDomain);
   if (!groupName) return false;
 
-  const selectedIds = new Set(state.selectedIds);
+  const selectedIds = options.selectedIds
+    ? new Set(options.selectedIds)
+    : new Set(state.selectedIds);
   if (selectedIds.size === 0) {
     return false;
   }
@@ -221,6 +247,7 @@ async function commitSelectionToGroup(targetDomain) {
   state.showCreateGroup = false;
   state.selectionMode = false;
   state.selectedIds.clear();
+  state.pendingGroupSelectedIds = [];
   state.emptyGroupDeleteArmed.delete(groupName);
   document.body.classList.remove('selection-mode');
 
@@ -251,12 +278,15 @@ async function createCustomGroup(groupName) {
 
   if (!state.customGroups.includes(targetDomain)) {
     state.customGroups = [...state.customGroups, targetDomain];
-    await persistCustomGroups();
   }
 
-  state.expandedDomains.add(targetDomain);
-  await persistExpandedDomains();
+  state.expandedDomains.delete(targetDomain);
   state.showCreateGroup = false;
+  state.pendingGroupSelectedIds = [];
+  await Promise.all([
+    persistCustomGroups(),
+    persistExpandedDomains()
+  ]);
   render();
 }
 
@@ -355,7 +385,7 @@ function renderEntry(entry) {
   item.classList.toggle('is-selected', state.selectedIds.has(entry.id));
 
   // Add entrance animation for newly added entries (within last 2 seconds)
-  const entryAge = Date.now() - entry.timestamp;
+  const entryAge = Date.now() - (entry.updatedAt || entry.createdAt || 0);
   if (entryAge < 2000) {
     item.style.animation = 'entryIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)';
   }
@@ -474,7 +504,10 @@ function renderEntry(entry) {
   return item;
 }
 
-function renderCreateGroupItem() {
+function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
+  const pendingSelectedIds = Array.isArray(selectedIds)
+    ? selectedIds.filter(Boolean)
+    : [];
   const item = document.createElement('div');
   item.className = 'create-group-item';
 
@@ -532,8 +565,8 @@ function renderCreateGroupItem() {
         input.disabled = true;
         const targetDomain = ReadLaterCore.cleanText(groupName);
 
-        if (state.selectionMode && state.selectedIds.size > 0) {
-          await commitSelectionToGroup(targetDomain);
+        if (state.selectionMode && pendingSelectedIds.length > 0) {
+          await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });
         } else {
           // No selection: just create empty group as drop target
           await createCustomGroup(groupName);
@@ -658,13 +691,14 @@ function renderDomainGroup(group) {
       try {
         if (isCurrentlyOpened) {
           // Close all tabs for this domain
-          const tabIds = state.openedDomainTabs.get(domain) || [];
+          const tabIds = Array.isArray(state.openedDomainTabs.get(domain))
+            ? state.openedDomainTabs.get(domain).filter(tabId => Number.isInteger(tabId))
+            : [];
           for (const tabId of tabIds) {
             try {
               await chrome.tabs.remove(tabId);
             } catch (err) {
-              // Tab might already be closed manually
-              console.log('Tab already closed:', tabId);
+              // Tab might already be closed manually.
             }
           }
           state.openedDomainTabs.delete(domain);
@@ -681,18 +715,26 @@ function renderDomainGroup(group) {
           for (const entry of group.entries) {
             if (entry && entry.url) {
               const tab = await chrome.tabs.create({ url: entry.url, active: false });
-              tabIds.push(tab.id);
+              if (tab && Number.isInteger(tab.id)) {
+                tabIds.push(tab.id);
+              }
+            }
+          }
+
+          if (tabIds.length > 0) {
+            state.openedDomainTabs.set(domain, tabIds);
+            await persistOpenedTabs();
+
+            // Update button UI
+            toggleBtn.classList.add('is-opened');
+            toggleBtn.title = `Close all ${group.count} tabs`;
+            toggleBtn.setAttribute('aria-label', `Close all ${group.count} tabs from ${group.domain}`);
+            toggleBtn.innerHTML = '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>';
+          } else {
+            state.openedDomainTabs.delete(domain);
+            await persistOpenedTabs();
           }
         }
-        state.openedDomainTabs.set(domain, tabIds);
-        await persistOpenedTabs();
-
-        // Update button UI
-        toggleBtn.classList.add('is-opened');
-        toggleBtn.title = `Close all ${group.count} tabs`;
-        toggleBtn.setAttribute('aria-label', `Close all ${group.count} tabs from ${group.domain}`);
-        toggleBtn.innerHTML = '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>';
-      }
       } finally {
         toggleBtn.disabled = false;
       }
@@ -839,6 +881,7 @@ function render() {
 
   if (state.selectionMode && state.selectedIds.size === 0) {
     state.selectionMode = false;
+    state.pendingGroupSelectedIds = [];
     state.showCreateGroup = false;
     document.body.classList.remove('selection-mode');
   }
@@ -866,7 +909,10 @@ function render() {
 
   // Insert "Create new group" item at the top in selection mode
   if (state.selectionMode && state.showCreateGroup && state.selectedIds.size > 0) {
-    const createGroupItem = renderCreateGroupItem();
+    if (!state.pendingGroupSelectedIds.length) {
+      state.pendingGroupSelectedIds = Array.from(state.selectedIds);
+    }
+    const createGroupItem = renderCreateGroupItem(state.pendingGroupSelectedIds);
     elements.unshift(createGroupItem);
   }
 
@@ -901,7 +947,13 @@ function render() {
 async function addCurrentPage() {
   // In selection mode, show create group item
   if (state.selectionMode) {
-    state.showCreateGroup = true;
+    if (state.showCreateGroup) {
+      state.showCreateGroup = false;
+      state.pendingGroupSelectedIds = [];
+    } else {
+      state.pendingGroupSelectedIds = Array.from(state.selectedIds);
+      state.showCreateGroup = state.pendingGroupSelectedIds.length > 0;
+    }
     render();
     return;
   }
