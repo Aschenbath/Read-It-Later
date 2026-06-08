@@ -1106,7 +1106,7 @@ h1 {
   width: 20px;
   height: 20px;
   transform: translateY(-50%);
-  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .domain-group-chevron::before,
@@ -1256,26 +1256,23 @@ h1 {
 }
 
 .domain-group-content {
-  display: grid;
-  grid-template-rows: 0fr;
+  max-height: 0;
   overflow: hidden;
-  transition: grid-template-rows 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: max-height 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .domain-group-content.is-expanded {
-  grid-template-rows: 1fr;
+  max-height: 2000px;
 }
 
 .domain-group-entries {
   padding: 10px 0 0;
   position: relative;
-  min-height: 0;
-  min-width: 0;
   opacity: 0;
-  transform: translateY(-12px);
+  transform: translateY(-16px);
   transition:
-    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s,
-    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+    opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.2s,
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries {
@@ -1288,35 +1285,35 @@ h1 {
   transform-origin: top center;
   animation: none;
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(-8px) scale(0.96);
   transition:
-    opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(1) {
-  transition-delay: 0.05s;
+  transition-delay: 0.08s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(2) {
-  transition-delay: 0.1s;
+  transition-delay: 0.14s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(3) {
-  transition-delay: 0.15s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
   transition-delay: 0.2s;
 }
 
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
+  transition-delay: 0.26s;
+}
+
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(5) {
-  transition-delay: 0.25s;
+  transition-delay: 0.32s;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
