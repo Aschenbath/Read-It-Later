@@ -583,16 +583,7 @@ h1 {
     border-color 0.14s ease,
     background 0.14s ease,
     box-shadow 0.14s ease,
-    transform 0.1s ease,
-    opacity 0.14s ease;
-}
-
-.entry-card.is-read .entry-open-button {
-  opacity: 0.62;
-}
-
-.entry-card.is-read:hover .entry-open-button {
-  opacity: 0.85;
+    transform 0.1s ease;
 }
 
 .entry-card:hover .entry-open-button,
@@ -691,20 +682,11 @@ h1 {
   color: #33383c;
   font-size: 14px;
   line-height: 1.25;
-  font-weight: 750;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   position: relative;
-  transition: font-weight 0.15s ease;
-}
-
-.entry-card:not(.is-read) .entry-title {
-  font-weight: 700;
-}
-
-.entry-card.is-read .entry-title {
-  font-weight: 600;
 }
 
 .entry-title[title]:hover::after {
@@ -758,20 +740,11 @@ h1 {
 }
 
 .entry-saved-at {
-  color: #8a8172;
+  color: var(--accent);
   font-size: 11.5px;
   line-height: 1.2;
   font-weight: 700;
   white-space: nowrap;
-  transition: color 0.15s ease;
-}
-
-.entry-card:not(.is-read) .entry-saved-at {
-  color: var(--accent);
-}
-
-.entry-card.is-read .entry-saved-at {
-  color: #8a8172;
 }
 
 .delete-button {
