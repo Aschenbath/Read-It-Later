@@ -22,13 +22,29 @@ const state = {
 };
 
 const els = {};
+let statusTimer = null;
 
 function byId(id) {
   return document.getElementById(id);
 }
 
-function setStatus(text) {
+function setStatus(text, options = {}) {
   els.statusText.textContent = text || '';
+
+  // Clear any existing timer
+  if (statusTimer) {
+    clearTimeout(statusTimer);
+    statusTimer = null;
+  }
+
+  // Auto-clear after delay (default 3 seconds)
+  if (text && options.autoClear !== false) {
+    const delay = options.delay || 3000;
+    statusTimer = setTimeout(() => {
+      els.statusText.textContent = '';
+      statusTimer = null;
+    }, delay);
+  }
 }
 
 function makeFallbackIcon(entry) {
@@ -510,9 +526,20 @@ function renderCreateGroupItem() {
       if (groupName) {
         // Disable input during creation to prevent double-submit
         input.disabled = true;
-        await createCustomGroup(groupName);
-        // After creation, the input row is removed and the new group is visible as a drop target.
-        // No need to reset here
+        const targetDomain = ReadLaterCore.cleanText(groupName);
+
+        if (state.selectionMode && state.selectedIds.size > 0) {
+          // In selection mode with selected entries: create group + merge + exit selection
+          if (targetDomain && !state.customGroups.includes(targetDomain)) {
+            state.customGroups = [...state.customGroups, targetDomain];
+            await persistCustomGroups();
+          }
+          await mergeSelectionToGroup(targetDomain);
+          exitSelectionMode();
+        } else {
+          // No selection: just create empty group as drop target
+          await createCustomGroup(groupName);
+        }
       } else {
         // Empty input, just close the input field
         button.classList.remove('hidden');
@@ -689,35 +716,40 @@ function renderDomainGroup(group) {
   toggleBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
 
+    // Prevent double-click
+    if (toggleBtn.disabled) return;
+    toggleBtn.disabled = true;
+
     const domain = group.domain;
     const isCurrentlyOpened = state.openedDomainTabs.has(domain);
 
-    if (isCurrentlyOpened) {
-      // Close all tabs for this domain
-      const tabIds = state.openedDomainTabs.get(domain) || [];
-      for (const tabId of tabIds) {
-        try {
-          await chrome.tabs.remove(tabId);
-        } catch (err) {
-          // Tab might already be closed manually
-          console.log('Tab already closed:', tabId);
+    try {
+      if (isCurrentlyOpened) {
+        // Close all tabs for this domain
+        const tabIds = state.openedDomainTabs.get(domain) || [];
+        for (const tabId of tabIds) {
+          try {
+            await chrome.tabs.remove(tabId);
+          } catch (err) {
+            // Tab might already be closed manually
+            console.log('Tab already closed:', tabId);
+          }
         }
-      }
-      state.openedDomainTabs.delete(domain);
-      await persistOpenedTabs();
+        state.openedDomainTabs.delete(domain);
+        await persistOpenedTabs();
 
-      // Update button UI
-      toggleBtn.classList.remove('is-opened');
-      toggleBtn.title = `Open all ${group.count} pages`;
-      toggleBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
-      toggleBtn.innerHTML = '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
-    } else {
-      // Open all tabs for this domain
-      const tabIds = [];
-      for (const entry of group.entries) {
-        if (entry && entry.url) {
-          const tab = await chrome.tabs.create({ url: entry.url, active: false });
-          tabIds.push(tab.id);
+        // Update button UI
+        toggleBtn.classList.remove('is-opened');
+        toggleBtn.title = `Open all ${group.count} pages`;
+        toggleBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
+        toggleBtn.innerHTML = '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
+      } else {
+        // Open all tabs for this domain
+        const tabIds = [];
+        for (const entry of group.entries) {
+          if (entry && entry.url) {
+            const tab = await chrome.tabs.create({ url: entry.url, active: false });
+            tabIds.push(tab.id);
         }
       }
       state.openedDomainTabs.set(domain, tabIds);
@@ -728,6 +760,9 @@ function renderDomainGroup(group) {
       toggleBtn.title = `Close all ${group.count} tabs`;
       toggleBtn.setAttribute('aria-label', `Close all ${group.count} tabs from ${group.domain}`);
       toggleBtn.innerHTML = '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>';
+    }
+    } finally {
+      toggleBtn.disabled = false;
     }
   });
 
