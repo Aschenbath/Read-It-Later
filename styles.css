@@ -1252,10 +1252,6 @@ h1 {
 
 .domain-group-content {
   overflow: hidden;
-  transition:
-    max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.2s ease-out;
-  will-change: max-height, opacity;
   contain: paint;
 }
 
@@ -1270,20 +1266,8 @@ h1 {
   animation: none;
 }
 
-.domain-group-content.is-revealing .entry-card {
-  animation: groupItemReveal 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.domain-group-content.is-revealing .entry-card:nth-child(2) {
-  animation-delay: 0.018s;
-}
-
-.domain-group-content.is-revealing .entry-card:nth-child(3) {
-  animation-delay: 0.032s;
-}
-
-.domain-group-content.is-revealing .entry-card:nth-child(n + 4) {
-  animation-delay: 0.044s;
+.domain-group-content.is-revealing .domain-group-entries {
+  animation: groupContentReveal 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
@@ -1302,10 +1286,10 @@ h1 {
     inset 0 -1px 0 rgba(79, 155, 133, 0.08);
 }
 
-@keyframes groupItemReveal {
+@keyframes groupContentReveal {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;

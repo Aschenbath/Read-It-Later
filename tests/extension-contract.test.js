@@ -289,17 +289,28 @@ assert.ok(
   /\.domain-group-entries \.entry-card\s*\{[\s\S]*?animation:\s*none;/.test(css),
   'grouped entries should be still by default instead of animating every render'
 );
+const groupContentBlock = css.match(/\.domain-group-content\s*\{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(groupContentBlock && !groupContentBlock.includes('max-height'), 'group expansion should not use max-height accordion animation');
 assert.ok(
-  popupJs.includes("contentWrap.classList.add('is-revealing')") &&
-  popupJs.includes("contentWrap.classList.remove('is-revealing')"),
+  popupJs.includes('function snapshotListPositions') &&
+  popupJs.includes('function animateListReflow'),
+  'group expansion should use FLIP reflow so only displaced items move naturally'
+);
+assert.ok(
+  !popupJs.includes("contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px'") &&
+  !popupJs.includes("contentWrap.style.maxHeight = '0'"),
+  'group expansion should not drive layout through max-height style changes'
+);
+assert.ok(
+  popupJs.includes("contentWrap.classList.add('is-revealing')"),
   'only the actively opened group should opt into child reveal motion'
 );
-const groupRevealKeyframes = css.match(/@keyframes groupItemReveal\s*\{[\s\S]*?\n\}/)?.[0] || '';
+const groupRevealKeyframes = css.match(/@keyframes groupContentReveal\s*\{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(groupRevealKeyframes, 'active group expansion should have a named, scoped child reveal animation');
 assert.ok(!groupRevealKeyframes.includes('scale('), 'child reveal should not scale cards');
 assert.ok(
-  /\.domain-group-content\.is-revealing \.entry-card\s*\{[\s\S]*?animation:\s*groupItemReveal/.test(css),
-  'child reveal animation should only apply inside the active expanding group'
+  /\.domain-group-content\.is-revealing \.domain-group-entries\s*\{[\s\S]*?animation:\s*groupContentReveal/.test(css),
+  'content reveal animation should only apply inside the active expanding group'
 );
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
