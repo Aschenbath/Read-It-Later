@@ -255,6 +255,7 @@ function createHarness(options = {}) {
   const getError = options.getError || '';
   const createResults = Array.isArray(options.createResults) ? [...options.createResults] : [];
   const removeFailures = new Set(options.removeFailures || []);
+  const removeFailureMessages = options.removeFailureMessages || {};
   const document = new TestDocument();
   const storage = {};
   const createdTabs = [];
@@ -319,7 +320,7 @@ function createHarness(options = {}) {
         async remove(tabId) {
           removedTabs.push(tabId);
           if (removeFailures.has(tabId)) {
-            throw new Error(`Could not close tab ${tabId}`);
+            throw new Error(removeFailureMessages[tabId] || `Could not close tab ${tabId}`);
           }
         }
       }
@@ -802,6 +803,34 @@ async function main() {
     assert.strictEqual(button.classList.contains('is-opened'), true);
     assert.strictEqual(button.title, 'Close all 1 tab');
     assert.strictEqual(api.els.statusText.textContent, 'Closed 2 of 3 tabs; 1 failed');
+  }
+
+  {
+    const { api, removedTabs, storage } = createHarness({
+      removeFailures: [202],
+      removeFailureMessages: { 202: 'No tab with id: 202.' }
+    });
+    api.state.openedDomainTabs.set('Docs', [201, 202, 203]);
+    const entry = {
+      ...ReadLaterCore.buildEntryFromTab({ title: 'Docs A', url: 'https://docs.example/a' }, 1000),
+      domain: 'Docs'
+    };
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries: [entry],
+      count: 1
+    });
+    const button = node.querySelector('.domain-group-action-btn');
+
+    await dispatchAndWait(button, { type: 'click', target: button });
+
+    assert.deepStrictEqual(removedTabs, [201, 202, 203], 'batch close should still attempt every tracked tab when one id is stale');
+    assert.strictEqual(api.state.openedDomainTabs.has('Docs'), false);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(storage.openedDomainTabs)), {});
+    assert.strictEqual(button.classList.contains('is-opened'), false);
+    assert.strictEqual(button.title, 'Open all 1 page');
+    assert.strictEqual(api.els.statusText.textContent, '');
   }
 
   {

@@ -203,6 +203,11 @@ function tabCountLabel(count) {
   return `${value} ${value === 1 ? 'tab' : 'tabs'}`;
 }
 
+function isMissingTabError(error) {
+  const message = String(error && error.message ? error.message : error || '');
+  return /no tab with id|invalid tab id|cannot find tab/i.test(message);
+}
+
 async function loadEntries() {
   const result = await chromeGet({
     [storageKey]: [],
@@ -930,7 +935,9 @@ function renderDomainGroup(group) {
             try {
               await chrome.tabs.remove(tabId);
             } catch (err) {
-              failedTabIds.push(tabId);
+              if (!isMissingTabError(err)) {
+                failedTabIds.push(tabId);
+              }
             }
           }
           if (failedTabIds.length > 0) {
