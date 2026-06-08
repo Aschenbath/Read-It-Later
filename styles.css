@@ -278,6 +278,10 @@ h1 {
   color: var(--accent);
   font-weight: 600;
   cursor: default;
+  transition:
+    border-color 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .selection-mode #searchInput:focus {
@@ -673,7 +677,8 @@ h1 {
   transition:
     border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .entry-card:hover .entry-open-button,
@@ -681,6 +686,7 @@ h1 {
   border-color: #c5dbd1;
   background: #ffffff;
   box-shadow: var(--shadow-soft);
+  transform: scale(1.005);
   outline: none;
 }
 
@@ -809,7 +815,7 @@ h1 {
 .entry-domain {
   display: block;
   min-width: 0;
-  color: #60686f;
+  color: #5a6169;
   font-size: 12.5px;
   line-height: 1.2;
   white-space: nowrap;
@@ -999,7 +1005,7 @@ h1 {
 .status-text {
   min-height: 18px;
   margin: 0;
-  color: #798085;
+  color: #6d767c;
   font-size: 12px;
   line-height: 18px;
 }
@@ -1055,7 +1061,11 @@ h1 {
     0 3px 8px rgba(52, 48, 39, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
     inset 0 -1px 0 rgba(79, 155, 133, 0.12);
-  outline: none;
+}
+
+.domain-group-header:focus-visible {
+  outline: 3px solid rgba(79, 155, 133, 0.5);
+  outline-offset: 3px;
 }
 
 .domain-group-header:active {
