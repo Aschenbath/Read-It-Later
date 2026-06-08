@@ -761,6 +761,7 @@ function renderDomainGroup(group) {
       persistExpandedDomains().catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
+      contentWrap.classList.remove('is-revealing');
       header.setAttribute('aria-expanded', 'false');
       contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
       requestAnimationFrame(() => {
@@ -777,6 +778,7 @@ function renderDomainGroup(group) {
       });
       header.setAttribute('aria-expanded', 'true');
       contentWrap.style.display = 'block';
+      contentWrap.classList.add('is-revealing');
       contentWrap.style.maxHeight = '0';
       contentWrap.style.opacity = '0';
       requestAnimationFrame(() => {
@@ -785,7 +787,8 @@ function renderDomainGroup(group) {
       });
       setTimeout(() => {
         contentWrap.style.maxHeight = 'none';
-      }, 240);
+        contentWrap.classList.remove('is-revealing');
+      }, 300);
     }
   };
 

@@ -287,7 +287,19 @@ assert.ok(!css.includes('stackExpand'), 'group expansion should not stagger/scal
 assert.ok(!popupJs.includes('--stack-index'), 'group rendering should not assign child-card stagger animation indexes');
 assert.ok(
   /\.domain-group-entries \.entry-card\s*\{[\s\S]*?animation:\s*none;/.test(css),
-  'grouped entries should stay visually still while only the group content panel reveals'
+  'grouped entries should be still by default instead of animating every render'
+);
+assert.ok(
+  popupJs.includes("contentWrap.classList.add('is-revealing')") &&
+  popupJs.includes("contentWrap.classList.remove('is-revealing')"),
+  'only the actively opened group should opt into child reveal motion'
+);
+const groupRevealKeyframes = css.match(/@keyframes groupItemReveal\s*\{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(groupRevealKeyframes, 'active group expansion should have a named, scoped child reveal animation');
+assert.ok(!groupRevealKeyframes.includes('scale('), 'child reveal should not scale cards');
+assert.ok(
+  /\.domain-group-content\.is-revealing \.entry-card\s*\{[\s\S]*?animation:\s*groupItemReveal/.test(css),
+  'child reveal animation should only apply inside the active expanding group'
 );
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');

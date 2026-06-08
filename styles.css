@@ -1253,8 +1253,8 @@ h1 {
 .domain-group-content {
   overflow: hidden;
   transition:
-    max-height 0.22s cubic-bezier(0.22, 0.61, 0.36, 1),
-    opacity 0.16s ease;
+    max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease-out;
   will-change: max-height, opacity;
   contain: paint;
 }
@@ -1268,6 +1268,22 @@ h1 {
   margin: 0 0 8px;
   transform-origin: top center;
   animation: none;
+}
+
+.domain-group-content.is-revealing .entry-card {
+  animation: groupItemReveal 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.domain-group-content.is-revealing .entry-card:nth-child(2) {
+  animation-delay: 0.018s;
+}
+
+.domain-group-content.is-revealing .entry-card:nth-child(3) {
+  animation-delay: 0.032s;
+}
+
+.domain-group-content.is-revealing .entry-card:nth-child(n + 4) {
+  animation-delay: 0.044s;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
@@ -1284,6 +1300,17 @@ h1 {
     0 3px 8px rgba(52, 48, 39, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     inset 0 -1px 0 rgba(79, 155, 133, 0.08);
+}
+
+@keyframes groupItemReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 420px) {
