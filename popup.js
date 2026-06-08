@@ -223,21 +223,19 @@ function openEntry(entry) {
 async function markAsRead(entry) {
   if (!entry || entry.isRead) return;
 
-  const index = state.entries.findIndex(e => e.id === entry.id);
-  if (index === -1) return;
-
-  state.entries[index] = { ...state.entries[index], isRead: true };
-  await persist(state.entries);
+  const updatedEntries = state.entries.map(e =>
+    e.id === entry.id ? { ...e, isRead: true } : e
+  );
+  await persist(updatedEntries);
 }
 
 async function toggleReadStatus(entry) {
   if (!entry) return;
 
-  const index = state.entries.findIndex(e => e.id === entry.id);
-  if (index === -1) return;
-
-  state.entries[index] = { ...state.entries[index], isRead: !state.entries[index].isRead };
-  await persist(state.entries);
+  const updatedEntries = state.entries.map(e =>
+    e.id === entry.id ? { ...e, isRead: !e.isRead } : e
+  );
+  await persist(updatedEntries);
 }
 
 async function removeEntry(entry) {
