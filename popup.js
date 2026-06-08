@@ -609,7 +609,54 @@ function renderDomainGroup(group) {
   const chevron = document.createElement('span');
   chevron.className = 'domain-group-chevron';
   chevron.setAttribute('aria-hidden', 'true');
+  chevron.style.cursor = 'pointer';
   header.appendChild(chevron);
+
+  // Chevron click: expand/collapse or delete empty group
+  chevron.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent header click
+
+    const wasExpanded = state.expandedDomains.has(group.domain);
+    // Empty custom group: first click expands, second click (when expanded) deletes
+    if (group.count === 0 && wasExpanded) {
+      removeCustomGroup(group.domain).catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not remove group');
+      });
+      return;
+    }
+
+    if (wasExpanded) {
+      state.expandedDomains.delete(group.domain);
+      persistExpandedDomains().catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not save group state');
+      });
+      header.setAttribute('aria-expanded', 'false');
+      contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        contentWrap.style.maxHeight = '0';
+        contentWrap.style.opacity = '0';
+      });
+      setTimeout(() => {
+        contentWrap.style.display = 'none';
+      }, 320);
+    } else {
+      state.expandedDomains.add(group.domain);
+      persistExpandedDomains().catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not save group state');
+      });
+      header.setAttribute('aria-expanded', 'true');
+      contentWrap.style.display = 'block';
+      contentWrap.style.maxHeight = '0';
+      contentWrap.style.opacity = '0';
+      requestAnimationFrame(() => {
+        contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
+        contentWrap.style.opacity = '1';
+      });
+      setTimeout(() => {
+        contentWrap.style.maxHeight = 'none';
+      }, 320);
+    }
+  });
 
   // Quick actions for the group (only show for non-empty groups)
   if (group.count > 0) {
@@ -725,54 +772,6 @@ function renderDomainGroup(group) {
     header.classList.remove('is-drag-over');
     if (state.selectionMode && state.selectedIds.size > 0) {
       await mergeSelectionToGroup(group.domain);
-    }
-  });
-
-  header.addEventListener('click', (e) => {
-    // Don't toggle if clicking action buttons
-    if (e.target.closest('.domain-group-actions')) {
-      return;
-    }
-
-    const wasExpanded = state.expandedDomains.has(group.domain);
-    // Empty custom group: first click expands, second click (when expanded) deletes
-    if (group.count === 0 && wasExpanded) {
-      removeCustomGroup(group.domain).catch((error) => {
-        setStatus(error && error.message ? error.message : 'Could not remove group');
-      });
-      return;
-    }
-
-    if (wasExpanded) {
-      state.expandedDomains.delete(group.domain);
-      persistExpandedDomains().catch((error) => {
-        setStatus(error && error.message ? error.message : 'Could not save group state');
-      });
-      header.setAttribute('aria-expanded', 'false');
-      contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
-      requestAnimationFrame(() => {
-        contentWrap.style.maxHeight = '0';
-        contentWrap.style.opacity = '0';
-      });
-      setTimeout(() => {
-        contentWrap.style.display = 'none';
-      }, 320);
-    } else {
-      state.expandedDomains.add(group.domain);
-      persistExpandedDomains().catch((error) => {
-        setStatus(error && error.message ? error.message : 'Could not save group state');
-      });
-      header.setAttribute('aria-expanded', 'true');
-      contentWrap.style.display = 'block';
-      contentWrap.style.maxHeight = '0';
-      contentWrap.style.opacity = '0';
-      requestAnimationFrame(() => {
-        contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
-        contentWrap.style.opacity = '1';
-      });
-      setTimeout(() => {
-        contentWrap.style.maxHeight = 'none';
-      }, 320);
     }
   });
 

@@ -129,12 +129,22 @@ function upsertEntry(entries, entry) {
     return { entries: sortEntriesForDisplay([nextEntry, ...list]), changed: true, created: true, entry: nextEntry };
   }
 
+  const oldEntry = list[index];
+  const oldDomain = oldEntry.domain || '';
+  const newDomain = nextEntry.domain || '';
+
+  // Preserve custom domain if old domain differs from extracted domain (user manually grouped it)
+  const oldExtractedDomain = domainFromUrl(oldEntry.url);
+  const isCustomDomain = oldDomain !== oldExtractedDomain;
+
   const merged = {
-    ...list[index],
+    ...oldEntry,
     ...nextEntry,
-    id: list[index].id || nextEntry.id,
-    createdAt: list[index].createdAt || nextEntry.createdAt,
-    updatedAt: nextEntry.updatedAt || Date.now()
+    id: oldEntry.id || nextEntry.id,
+    createdAt: oldEntry.createdAt || nextEntry.createdAt,
+    updatedAt: nextEntry.updatedAt || Date.now(),
+    // Preserve custom domain if it was manually set
+    domain: isCustomDomain ? oldDomain : newDomain
   };
   const next = [...list];
   next[index] = merged;
