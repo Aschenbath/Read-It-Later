@@ -131,7 +131,11 @@ async function mergeSelectionToGroup(targetDomain) {
   state.expandedDomains.add(targetDomain);
 
   await persist(updatedEntries);
-  exitSelectionMode();
+
+  // Stay in selection mode but clear selection and hide create group input
+  state.selectedIds.clear();
+  state.showCreateGroup = false;
+  render();
 }
 
 async function createGroupFromSelection() {
@@ -696,12 +700,21 @@ function render() {
 
   // Update search box based on selection mode
   if (state.selectionMode) {
-    // In selection mode, show selection count and exit button
-    els.searchInput.value = `${state.selectedIds.size} selected`;
-    els.searchInput.disabled = true;
-    els.clearSearchBtn.classList.remove('hidden');
-    els.clearSearchBtn.title = 'Exit selection mode';
-    els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
+    if (state.selectedIds.size > 0) {
+      // In selection mode with items selected, show selection count and exit button
+      els.searchInput.value = `${state.selectedIds.size} selected`;
+      els.searchInput.disabled = true;
+      els.clearSearchBtn.classList.remove('hidden');
+      els.clearSearchBtn.title = 'Exit selection mode';
+      els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
+    } else {
+      // In selection mode but no items selected, show normal search
+      els.searchInput.value = state.query;
+      els.searchInput.disabled = false;
+      els.clearSearchBtn.classList.toggle('hidden', !state.query);
+      els.clearSearchBtn.title = 'Clear search';
+      els.clearSearchBtn.setAttribute('aria-label', 'Clear search');
+    }
   } else {
     // Normal mode
     els.searchInput.disabled = false;
