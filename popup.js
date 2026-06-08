@@ -281,6 +281,7 @@ async function createCustomGroup(groupName) {
   }
 
   state.expandedDomains.delete(targetDomain);
+  state.emptyGroupDeleteArmed.delete(targetDomain);
   state.showCreateGroup = false;
   state.pendingGroupSelectedIds = [];
   await Promise.all([
@@ -296,6 +297,7 @@ async function removeCustomGroup(groupName) {
 
   state.customGroups = state.customGroups.filter(group => group !== targetDomain);
   state.expandedDomains.delete(targetDomain);
+  state.emptyGroupDeleteArmed.delete(targetDomain);
   await Promise.all([
     persistCustomGroups(),
     persistExpandedDomains()
@@ -567,7 +569,7 @@ function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
         input.disabled = true;
         const targetDomain = ReadLaterCore.cleanText(groupName);
 
-        if (state.selectionMode && pendingSelectedIds.length > 0) {
+        if (pendingSelectedIds.length > 0) {
           await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });
         } else {
           // No selection: just create empty group as drop target
@@ -1148,7 +1150,14 @@ function init() {
 
   // Listen for storage changes from background script (e.g., Alt+1 shortcut)
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local' && changes[storageKey]) {
+    const shouldReload = areaName === 'local' && (
+      changes[storageKey] ||
+      changes[customGroupsStorageKey] ||
+      changes[expandedDomainsStorageKey] ||
+      changes[viewModeStorageKey] ||
+      changes.openedDomainTabs
+    );
+    if (shouldReload) {
       loadEntries().catch((error) => {
         console.error('Failed to reload entries:', error);
       });

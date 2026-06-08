@@ -288,3 +288,13 @@ assert.ok(backgroundJs.includes('ReadLaterCore.deleteEntry'), 'background shortc
 assert.ok(backgroundJs.includes('ReadLaterCore.upsertEntry'), 'background shortcut should add pages through the shared dedupe logic');
 assert.ok(!backgroundJs.includes('e.url === entry.url'), 'background shortcut must not compare raw URLs');
 assert.ok(!backgroundJs.includes('chrome.notifications.getAll'), 'notification cleanup should clear only the notification it created');
+
+const storageChangedBlock = popupJs.match(/chrome\.storage\.onChanged\.addListener\(\(changes, areaName\) => \{[\s\S]*?\n  \}\);/)?.[0] || '';
+assert.ok(
+  storageChangedBlock.includes('changes[storageKey]') &&
+  storageChangedBlock.includes('changes[customGroupsStorageKey]') &&
+  storageChangedBlock.includes('changes[expandedDomainsStorageKey]') &&
+  storageChangedBlock.includes('changes[viewModeStorageKey]') &&
+  storageChangedBlock.includes('changes.openedDomainTabs'),
+  'popup should reload when entries, custom groups, expanded state, view mode, or opened-tab state change in storage'
+);
