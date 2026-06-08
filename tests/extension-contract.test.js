@@ -72,6 +72,8 @@ assert.ok(
   popupJs.includes('exitSelectionMode();'),
   'deselecting the last selected entry should leave selection mode without a second click'
 );
+assert.ok(!popupJs.includes('In selection mode but no items selected'), 'selection mode should not render a second empty-selection exit state');
+assert.ok(popupJs.includes('els.searchInput.value = state.query;'), 'normal render should restore the real search box value after selection mode');
 assert.ok(popupJs.includes("event.key === 'Escape'"), 'Escape should clear an active search quickly');
 assert.ok(popupJs.includes("event.key.toLowerCase() === 'k'"), 'Ctrl/Command+K should focus search');
 assert.ok(popupJs.includes('ReadLaterCore.formatSavedAt'), 'entries should show relative saved time for scanning');
