@@ -362,3 +362,8 @@ assert.ok(
   popupJs.includes('function consumeStorageEcho'),
   'popup-originated storage writes should be tracked so their onChanged echo does not reload the same popup'
 );
+assert.strictEqual(
+  (popupJs.match(/await chromeSet\(/g) || []).length,
+  1,
+  'business storage writes should go through setPopupStorage; chromeSet should only be awaited by the echo-guard wrapper'
+);
