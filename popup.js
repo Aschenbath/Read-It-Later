@@ -255,6 +255,8 @@ function exitSelectionMode() {
 }
 
 function toggleViewMode() {
+  if (state.selectionMode) return;
+
   state.viewMode = state.viewMode === 'grouped' ? 'flat' : 'grouped';
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
 
@@ -1033,6 +1035,23 @@ function renderAddButtonState() {
   }
 }
 
+function renderViewModeButtonState() {
+  if (state.selectionMode) {
+    const lockedLabel = 'Grouped view is locked while organizing';
+    els.viewModeBtn.disabled = true;
+    els.viewModeBtn.title = lockedLabel;
+    els.viewModeBtn.setAttribute('aria-label', lockedLabel);
+    return;
+  }
+
+  const nextLabel = state.viewMode === 'flat'
+    ? 'Show grouped view'
+    : 'Show flat list';
+  els.viewModeBtn.disabled = false;
+  els.viewModeBtn.title = nextLabel;
+  els.viewModeBtn.setAttribute('aria-label', nextLabel);
+}
+
 function render() {
   syncCurrentTabEntry();
 
@@ -1077,6 +1096,7 @@ function render() {
   els.entriesList.replaceChildren(...elements);
   renderEmptyState(visible, elements.length);
   renderAddButtonState();
+  renderViewModeButtonState();
 
   // Update search box based on selection mode
   if (state.selectionMode) {
@@ -1296,6 +1316,7 @@ function init() {
   els.emptyTitle = byId('emptyTitle');
   els.statusText = byId('statusText');
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
+  renderViewModeButtonState();
   bind();
   loadEntries().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not load list');

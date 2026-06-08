@@ -512,6 +512,35 @@ async function main() {
     assert.strictEqual(api.els.addCurrentPageBtn.title, 'Remove current page');
     assert.strictEqual(api.els.addCurrentPageBtn.getAttribute('aria-label'), 'Remove current page from Read It Later');
   }
+
+  {
+    const { api } = createHarness();
+
+    api.state.viewMode = 'flat';
+    api.render();
+
+    assert.strictEqual(api.els.viewModeBtn.title, 'Show grouped view');
+    assert.strictEqual(api.els.viewModeBtn.getAttribute('aria-label'), 'Show grouped view');
+
+    api.state.viewMode = 'grouped';
+    api.render();
+
+    assert.strictEqual(api.els.viewModeBtn.title, 'Show flat list');
+    assert.strictEqual(api.els.viewModeBtn.getAttribute('aria-label'), 'Show flat list');
+  }
+
+  {
+    const { api } = createHarness();
+
+    api.state.viewMode = 'flat';
+    api.state.selectionMode = true;
+    api.state.selectedIds.add('selected-entry');
+    api.render();
+
+    assert.strictEqual(api.els.viewModeBtn.disabled, true);
+    assert.strictEqual(api.els.viewModeBtn.title, 'Grouped view is locked while organizing');
+    assert.strictEqual(api.els.viewModeBtn.getAttribute('aria-label'), 'Grouped view is locked while organizing');
+  }
 }
 
 main().catch((error) => {
