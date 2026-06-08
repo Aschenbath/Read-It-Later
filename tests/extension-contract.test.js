@@ -312,6 +312,10 @@ assert.ok(
   /\.domain-group-content\.is-revealing \.domain-group-entries\s*\{[\s\S]*?animation:\s*groupContentReveal/.test(css),
   'content reveal animation should only apply inside the active expanding group'
 );
+const modeEnterFlatBlock = css.match(/body\.mode-enter-flat \.entry-card\s*\{[\s\S]*?\n\}/)?.[0] || '';
+assert.strictEqual(modeEnterFlatBlock, '', 'grouped-to-flat view switching should not attach a flat-card enter animation block');
+assert.ok(!css.includes('@keyframes cardEnterFlat'), 'flat list should not replay a card-enter animation after grouped-to-flat switching');
+assert.ok(!popupJs.includes("'mode-enter-flat'"), 'grouped-to-flat switching should render flat entries and stop without adding a post-render enter class');
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
 assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');

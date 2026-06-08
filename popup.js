@@ -267,7 +267,7 @@ async function toggleViewMode() {
 
   const isCurrentlyGrouped = state.viewMode === 'grouped';
   const exitClass = isCurrentlyGrouped ? 'mode-exit-grouped' : 'mode-exit-flat';
-  const enterClass = isCurrentlyGrouped ? 'mode-enter-flat' : 'mode-enter-grouped';
+  const enterClass = isCurrentlyGrouped ? '' : 'mode-enter-grouped';
 
   // Phase 1: Exit animation
   document.body.classList.add(exitClass);
@@ -301,14 +301,16 @@ async function toggleViewMode() {
 
   render();
 
-  // Phase 3: Enter animation
-  document.body.classList.add(enterClass);
-
-  // Wait for enter animation (0.7s to complete)
-  await new Promise(resolve => setTimeout(resolve, 700));
+  // Phase 3: Enter animation. Flat lists should land still after render.
+  if (enterClass) {
+    document.body.classList.add(enterClass);
+    await new Promise(resolve => setTimeout(resolve, 700));
+  }
 
   // Clean up
-  document.body.classList.remove(enterClass);
+  if (enterClass) {
+    document.body.classList.remove(enterClass);
+  }
   state.isTransitioningMode = false;
 
   // Re-enable the button
