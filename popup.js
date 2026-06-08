@@ -764,13 +764,16 @@ function renderDomainGroup(group) {
 
   const chevron = document.createElement('span');
   chevron.className = 'domain-group-chevron';
-  chevron.setAttribute('aria-hidden', 'true');
+  if (group.count > 0) {
+    chevron.setAttribute('aria-hidden', 'true');
+  }
   chevron.style.cursor = 'pointer';
   header.appendChild(chevron);
 
   // Empty groups do not expand. Their chevron is a two-click remove affordance.
-  chevron.addEventListener('click', (e) => {
+  const activateEmptyGroupRemoval = (e) => {
     if (group.count > 0) return;
+    e.preventDefault();
     e.stopPropagation();
 
     const wasExpanded = state.emptyGroupDeleteArmed.has(group.domain);
@@ -783,6 +786,20 @@ function renderDomainGroup(group) {
 
     state.emptyGroupDeleteArmed.add(group.domain);
     header.classList.add('is-delete-armed');
+  };
+
+  if (group.count === 0) {
+    chevron.setAttribute('role', 'button');
+    chevron.tabIndex = 0;
+    chevron.setAttribute('aria-label', `Remove empty group ${group.domain}`);
+  }
+
+  chevron.addEventListener('click', activateEmptyGroupRemoval);
+  chevron.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') {
+      return;
+    }
+    activateEmptyGroupRemoval(e);
   });
 
   // Quick actions for the group (only show for non-empty groups)

@@ -442,6 +442,34 @@ async function main() {
   }
 
   {
+    const { api } = createHarness();
+    api.state.customGroups = ['Keyboard Empty'];
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Keyboard Empty',
+      entries: [],
+      count: 0
+    });
+    const chevron = node.querySelector('.domain-group-chevron');
+
+    assert.strictEqual(chevron.getAttribute('role'), 'button');
+    assert.strictEqual(chevron.tabIndex, 0);
+    assert.strictEqual(chevron.getAttribute('aria-label'), 'Remove empty group Keyboard Empty');
+
+    await dispatchAndWait(chevron, { type: 'keydown', key: 'Enter' });
+
+    assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Keyboard Empty'), true);
+    assert.deepStrictEqual(Array.from(api.state.customGroups), ['Keyboard Empty']);
+
+    await dispatchAndWait(chevron, { type: 'keydown', key: 'Enter' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Keyboard Empty'), false);
+    assert.deepStrictEqual(Array.from(api.state.customGroups), []);
+  }
+
+  {
     const { api, getCalls } = createHarness();
 
     api.init();

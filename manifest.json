@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Read It Later",
-  "version": "1.0.66",
+  "version": "1.0.67",
   "description": "A local popup list for saving the current page to read later.",
   "action": {
     "default_popup": "popup.html",
