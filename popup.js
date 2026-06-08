@@ -900,6 +900,17 @@ function bind() {
       els.searchInput.select();
       return;
     }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+      // In selection mode, select all visible entries
+      if (state.selectionMode) {
+        event.preventDefault();
+        state.visibleEntries.forEach(entry => {
+          state.selectedIds.add(entry.id);
+        });
+        render();
+        return;
+      }
+    }
     if (event.key === 'ArrowDown') {
       const current = focusedEntryIndex();
       if (current >= 0 || document.activeElement === els.searchInput) {
@@ -921,6 +932,15 @@ function bind() {
       if (entry) {
         event.preventDefault();
         removeEntry(entry);
+      }
+      return;
+    }
+    if (event.key === 'Enter') {
+      const entry = focusedEntry();
+      if (entry && document.activeElement !== els.searchInput) {
+        event.preventDefault();
+        openEntry(entry);
+        markAsRead(entry);
       }
     }
   });
