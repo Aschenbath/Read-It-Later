@@ -463,6 +463,23 @@ async function main() {
 
     assert.strictEqual(getCalls.length, 0, 'popup-originated view-mode writes should not reload and re-render the same popup');
   }
+
+  {
+    const { api } = createHarness();
+    const tab = {
+      title: 'Saved current page',
+      url: 'https://example.com/current'
+    };
+    const entry = ReadLaterCore.buildEntryFromTab(tab, 1000);
+
+    api.state.entries = [entry];
+    api.state.currentTab = tab;
+    api.render();
+
+    assert.strictEqual(api.els.addCurrentPageBtn.classList.contains('is-saved'), true);
+    assert.strictEqual(api.els.addCurrentPageBtn.title, 'Remove current page');
+    assert.strictEqual(api.els.addCurrentPageBtn.getAttribute('aria-label'), 'Remove current page from Read It Later');
+  }
 }
 
 main().catch((error) => {

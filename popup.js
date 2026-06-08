@@ -1006,10 +1006,10 @@ function renderAddButtonState() {
     els.addCurrentPageBtn.disabled = false;
     const isSaved = !!state.currentTabEntry;
     els.addCurrentPageBtn.classList.toggle('is-saved', isSaved);
-    els.addCurrentPageBtn.title = isSaved ? 'Current page is saved' : 'Add current page';
+    els.addCurrentPageBtn.title = isSaved ? 'Remove current page' : 'Add current page';
     els.addCurrentPageBtn.setAttribute(
       'aria-label',
-      isSaved ? 'Current page is already saved' : 'Add current page'
+      isSaved ? 'Remove current page from Read It Later' : 'Add current page'
     );
   }
 }
