@@ -711,6 +711,14 @@ function renderAddButtonState() {
 
 function render() {
   syncCurrentTabEntry();
+
+  // Clear search query BEFORE filtering if in selection mode with empty selection
+  // This ensures newly created groups are visible immediately
+  if (state.selectionMode && state.selectedIds.size === 0 && state.query) {
+    state.query = '';
+    els.searchInput.value = '';
+  }
+
   const visible = ReadLaterCore.filterEntries(ReadLaterCore.sortEntriesForDisplay(state.entries), state.query);
   state.visibleEntries = visible;
 
@@ -751,11 +759,7 @@ function render() {
       els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
     } else {
       // In selection mode but no items selected
-      // Clear the search query so newly created groups are visible
-      if (state.query) {
-        state.query = '';
-        els.searchInput.value = '';
-      }
+      // Search query already cleared at the start of render()
       // Show search box as normal, but keep exit button visible
       els.searchInput.value = state.query;
       els.searchInput.disabled = false;
