@@ -117,8 +117,28 @@ assert.ok(
   'group rendering should include empty user-created groups as drop targets'
 );
 assert.ok(
-  popupJs.includes('const hasSelectedEntry = state.selectionMode && group.entries.some(entry => state.selectedIds.has(entry.id))'),
-  'selection/classification mode should auto-expand groups containing selected entries'
+  popupJs.includes('const isExpanded = state.expandedDomains.has(group.domain);'),
+  'selection/classification mode should keep classified groups compact until the user opens them'
+);
+assert.ok(
+  !popupJs.includes('const hasSelectedEntry = state.selectionMode'),
+  'selection/classification mode should not auto-expand groups just because they contain selected entries'
+);
+assert.ok(
+  !popupJs.includes('In selection mode, merge selected entries to this group'),
+  'clicking a group in selection mode should open/collapse it instead of silently moving selected entries'
+);
+assert.ok(
+  popupJs.includes('async function removeCustomGroup'),
+  'empty user-created groups should be removable from the grouped workspace'
+);
+assert.ok(
+  popupJs.includes('state.selectionMode && group.count === 0 && wasExpanded'),
+  'clicking an already-expanded empty group in selection mode should delete the empty group'
+);
+assert.ok(
+  /if\s*\(\s*state\.selectionMode\s*\)\s*{\s*state\.expandedDomains\.delete\(targetDomain\);/.test(popupJs),
+  'moving selected entries into a group should keep that group compact in selection/classification mode'
 );
 assert.ok(
   popupJs.includes('function makeIcon(entry = {})'),

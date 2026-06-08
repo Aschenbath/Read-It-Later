@@ -194,8 +194,11 @@ async function mergeSelectionToGroup(targetDomain) {
     return entry;
   });
 
-  // Expand the newly created/updated group BEFORE persisting
-  state.expandedDomains.add(targetDomain);
+  if (state.selectionMode) {
+    state.expandedDomains.delete(targetDomain);
+  } else {
+    state.expandedDomains.add(targetDomain);
+  }
   persistExpandedDomains().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not save group state');
   });
@@ -219,6 +222,19 @@ async function createCustomGroup(groupName) {
   state.expandedDomains.add(targetDomain);
   await persistExpandedDomains();
   state.showCreateGroup = false;
+  render();
+}
+
+async function removeCustomGroup(groupName) {
+  const targetDomain = ReadLaterCore.cleanText(groupName);
+  if (!targetDomain) return;
+
+  state.customGroups = state.customGroups.filter(group => group !== targetDomain);
+  state.expandedDomains.delete(targetDomain);
+  await Promise.all([
+    persistCustomGroups(),
+    persistExpandedDomains()
+  ]);
   render();
 }
 
@@ -529,8 +545,7 @@ function renderDomainGroup(group) {
   container.className = 'domain-group';
   container.dataset.domain = group.domain;
 
-  const hasSelectedEntry = state.selectionMode && group.entries.some(entry => state.selectedIds.has(entry.id));
-  const isExpanded = state.expandedDomains.has(group.domain) || hasSelectedEntry;
+  const isExpanded = state.expandedDomains.has(group.domain);
 
   const header = document.createElement('button');
   header.className = 'domain-group-header';
@@ -630,13 +645,14 @@ function renderDomainGroup(group) {
       return;
     }
 
-    // In selection mode, merge selected entries to this group
-    if (state.selectionMode && state.selectedIds.size > 0) {
-      mergeSelectionToGroup(group.domain);
+    const wasExpanded = state.expandedDomains.has(group.domain);
+    if (state.selectionMode && group.count === 0 && wasExpanded) {
+      removeCustomGroup(group.domain).catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not remove group');
+      });
       return;
     }
 
-    const wasExpanded = state.expandedDomains.has(group.domain);
     if (wasExpanded) {
       state.expandedDomains.delete(group.domain);
       persistExpandedDomains().catch((error) => {
