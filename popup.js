@@ -927,9 +927,12 @@ function renderDomainGroup(group) {
     toggleBtn.type = 'button';
     toggleBtn.dataset.domain = group.domain;
 
-    const isOpened = state.openedDomainTabs.has(group.domain);
-    toggleBtn.title = isOpened ? `Close all ${tabCountLabel(group.count)}` : `Open all ${pageCountLabel(group.count)}`;
-    toggleBtn.setAttribute('aria-label', isOpened ? `Close all ${tabCountLabel(group.count)} from ${group.domain}` : `Open all ${pageCountLabel(group.count)} from ${group.domain}`);
+    const openedTabIds = Array.isArray(state.openedDomainTabs.get(group.domain))
+      ? state.openedDomainTabs.get(group.domain).filter(tabId => Number.isInteger(tabId))
+      : [];
+    const isOpened = openedTabIds.length > 0;
+    toggleBtn.title = isOpened ? `Close all ${tabCountLabel(openedTabIds.length)}` : `Open all ${pageCountLabel(group.count)}`;
+    toggleBtn.setAttribute('aria-label', isOpened ? `Close all ${tabCountLabel(openedTabIds.length)} from ${group.domain}` : `Open all ${pageCountLabel(group.count)} from ${group.domain}`);
     toggleBtn.innerHTML = isOpened
       ? '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>'
       : '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
@@ -1002,6 +1005,8 @@ function renderDomainGroup(group) {
                 const tab = await chrome.tabs.create({ url: entry.url, active: false });
                 if (tab && Number.isInteger(tab.id)) {
                   tabIds.push(tab.id);
+                } else {
+                  failedCount += 1;
                 }
               } catch (err) {
                 failedCount += 1;
@@ -1019,8 +1024,8 @@ function renderDomainGroup(group) {
               iconSpan.className = 'action-icon action-icon-close-all';
             }
             toggleBtn.classList.add('is-opened');
-            toggleBtn.title = `Close all ${tabCountLabel(group.count)}`;
-            toggleBtn.setAttribute('aria-label', `Close all ${tabCountLabel(group.count)} from ${group.domain}`);
+            toggleBtn.title = `Close all ${tabCountLabel(tabIds.length)}`;
+            toggleBtn.setAttribute('aria-label', `Close all ${tabCountLabel(tabIds.length)} from ${group.domain}`);
             if (failedCount > 0) {
               setStatus(`Opened ${tabIds.length} of ${group.entries.length} pages; ${failedCount} failed`, { autoClear: false });
             }

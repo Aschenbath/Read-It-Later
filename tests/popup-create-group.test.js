@@ -874,7 +874,37 @@ async function main() {
     assert.deepStrictEqual(Array.from(api.state.openedDomainTabs.get('Docs')), [101, 103]);
     assert.deepStrictEqual(JSON.parse(JSON.stringify(storage.openedDomainTabs)), { Docs: [101, 103] });
     assert.strictEqual(button.classList.contains('is-opened'), true);
-    assert.strictEqual(button.title, 'Close all 3 tabs');
+    assert.strictEqual(button.title, 'Close all 2 tabs');
+    assert.strictEqual(api.els.statusText.textContent, 'Opened 2 of 3 pages; 1 failed');
+  }
+
+  {
+    const { api, createdTabs, storage } = createHarness({
+      createResults: [
+        { id: 101 },
+        {},
+        { id: 103 }
+      ]
+    });
+    const entries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs A', url: 'https://docs.example/a' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs B', url: 'https://docs.example/b' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs C', url: 'https://docs.example/c' }, 1000)
+    ].map(entry => ({ ...entry, domain: 'Docs' }));
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries,
+      count: entries.length
+    });
+    const button = node.querySelector('.domain-group-action-btn');
+
+    await dispatchAndWait(button, { type: 'click', target: button });
+
+    assert.strictEqual(createdTabs.length, 3, 'batch open should still attempt every entry when one tab response has no id');
+    assert.deepStrictEqual(Array.from(api.state.openedDomainTabs.get('Docs')), [101, 103]);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(storage.openedDomainTabs)), { Docs: [101, 103] });
+    assert.strictEqual(button.title, 'Close all 2 tabs');
     assert.strictEqual(api.els.statusText.textContent, 'Opened 2 of 3 pages; 1 failed');
   }
 

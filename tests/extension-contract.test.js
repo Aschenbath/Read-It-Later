@@ -139,6 +139,12 @@ assert.ok(
   popupJs.includes('if (tab && Number.isInteger(tab.id))'),
   'batch open should store only real tab ids returned by chrome.tabs.create'
 );
+assert.ok(
+  popupJs.includes('const openedTabIds = Array.isArray(state.openedDomainTabs.get(group.domain))') &&
+    popupJs.includes('tabCountLabel(openedTabIds.length)') &&
+    popupJs.includes('tabCountLabel(tabIds.length)'),
+  'batch-open close labels should reflect actual tracked tab ids, not total group page count'
+);
 assert.ok(!popupJs.includes('console.log('), 'popup should not leave debug logging in normal interaction paths');
 assert.ok(
   popupJs.includes('document.activeElement.dataset.entryId'),
