@@ -387,6 +387,23 @@ async function main() {
 
   {
     const { api } = createHarness();
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Fresh grouped page',
+      url: 'https://fresh.example/read'
+    }, Date.now());
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Fresh',
+      entries: [entry],
+      count: 1
+    });
+    const card = node.querySelector('.entry-card');
+
+    assert.strictEqual(card.style.animation, 'none');
+  }
+
+  {
+    const { api } = createHarness();
     api.state.customGroups = ['Empty'];
     const node = api.renderDomainGroup({
       type: 'group',
