@@ -244,6 +244,11 @@ async function removeEntry(entry) {
   const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
   if (!next.changed) return;
 
+  // Clean up selection state if the entry was selected
+  if (state.selectedIds.has(entry.id)) {
+    state.selectedIds.delete(entry.id);
+  }
+
   const card = els.entriesList.querySelector(`[data-id="${CSS.escape(entry.id)}"]`);
   if (card) {
     card.classList.add('leaving');
@@ -438,9 +443,19 @@ function renderCreateGroupItem() {
 
   input.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent form submission
       const groupName = input.value.trim();
       if (groupName) {
+        // Disable input during creation to prevent double-submit
+        input.disabled = true;
         await mergeSelectionToGroup(groupName);
+        // After merge, the whole item will be removed from DOM by render()
+        // No need to reset here
+      } else {
+        // Empty input, just close the input field
+        button.classList.remove('hidden');
+        inputWrap.classList.add('hidden');
+        input.value = '';
       }
     } else if (e.key === 'Escape') {
       button.classList.remove('hidden');
@@ -450,11 +465,14 @@ function renderCreateGroupItem() {
   });
 
   input.addEventListener('blur', () => {
-    setTimeout(() => {
-      button.classList.remove('hidden');
-      inputWrap.classList.add('hidden');
-      input.value = '';
-    }, 150);
+    // Only clean up if not disabled (disabled means we're in the middle of merging)
+    if (!input.disabled) {
+      setTimeout(() => {
+        button.classList.remove('hidden');
+        inputWrap.classList.add('hidden');
+        input.value = '';
+      }, 150);
+    }
   });
 
   return item;
