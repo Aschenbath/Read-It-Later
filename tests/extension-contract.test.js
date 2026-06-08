@@ -69,6 +69,9 @@ assert.ok(popupJs.includes("els.emptyActionBtn.dataset.action = hasNoMatches ? '
 assert.ok(popupJs.includes("els.clearSearchBtn.addEventListener('click'"), 'search should have a one-click clear control');
 const enterSelectionModeBlock = popupJs.match(/function enterSelectionMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(!enterSelectionModeBlock.includes('render();'), 'long-press selection should not render an empty selection state before selecting the pressed entry');
+const mergeSelectionToGroupBlock = popupJs.match(/async function mergeSelectionToGroup\(targetDomain\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(!mergeSelectionToGroupBlock.includes('state.selectedIds.clear();'), 'creating a group should keep the selected entries selected for continued classification');
+assert.ok(!mergeSelectionToGroupBlock.includes('state.selectionMode = false'), 'creating a group should not return to normal mode');
 assert.ok(
   popupJs.includes('if (state.selectionMode && state.selectedIds.size === 0)') &&
   popupJs.includes('exitSelectionMode();'),

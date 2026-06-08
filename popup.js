@@ -113,7 +113,6 @@ function enterSelectionMode() {
 }
 
 function exitSelectionMode() {
-  console.log('[exitSelectionMode] CALLED', new Error().stack);
   state.selectionMode = false;
   state.selectedIds.clear();
   state.showCreateGroup = false;
@@ -175,12 +174,6 @@ async function deleteSelectedEntries() {
 }
 
 async function mergeSelectionToGroup(targetDomain) {
-  console.log('[mergeSelectionToGroup] START', {
-    targetDomain,
-    selectedCount: state.selectedIds.size,
-    selectionMode: state.selectionMode
-  });
-
   if (state.selectedIds.size === 0) return;
 
   // Update domain for selected entries
@@ -197,27 +190,11 @@ async function mergeSelectionToGroup(targetDomain) {
     setStatus(error && error.message ? error.message : 'Could not save group state');
   });
 
-  // Clear selection and hide create group input BEFORE persist
-  state.selectedIds.clear();
+  // Hide the create-group input, but keep the selected entries selected so classification can continue.
   state.showCreateGroup = false;
-
-  // Exit selection mode after creating group
-  state.selectionMode = false;
-  document.body.classList.remove('selection-mode');
-
-  console.log('[mergeSelectionToGroup] BEFORE persist', {
-    selectionMode: state.selectionMode,
-    selectedCount: state.selectedIds.size,
-    showCreateGroup: state.showCreateGroup
-  });
 
   // Persist will call render() with the updated state
   await persist(updatedEntries);
-
-  console.log('[mergeSelectionToGroup] AFTER persist', {
-    selectionMode: state.selectionMode,
-    selectedCount: state.selectedIds.size
-  });
 }
 
 async function createGroupFromSelection() {
