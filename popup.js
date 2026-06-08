@@ -20,7 +20,7 @@ const state = {
   selectedIds: new Set(),
   pendingGroupSelectedIds: [],
   showCreateGroup: false,
-  viewMode: 'flat' // 'grouped' or 'flat'
+  viewMode: 'grouped' // 'grouped' or 'flat'
 };
 
 const els = {};
@@ -106,7 +106,7 @@ async function loadEntries() {
     [storageKey]: [],
     openedDomainTabs: {},
     [expandedDomainsStorageKey]: [],
-    [viewModeStorageKey]: 'flat',
+    [viewModeStorageKey]: 'grouped',
     [customGroupsStorageKey]: []
   });
   const entries = Array.isArray(result[storageKey]) ? result[storageKey] : [];
