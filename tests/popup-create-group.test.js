@@ -588,6 +588,40 @@ async function main() {
   }
 
   {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Dragged page',
+      url: 'https://drag.example/page'
+    }, 1000);
+    api.state.entries = [entry];
+    api.state.selectionMode = true;
+    api.state.selectedIds.add(entry.id);
+    api.state.pendingGroupSelectedIds = [entry.id];
+    api.state.showCreateGroup = true;
+
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries: [ReadLaterCore.buildEntryFromTab({
+        title: 'Existing docs page',
+        url: 'https://docs.example/existing'
+      }, 1000)],
+      count: 1
+    });
+    const header = node.querySelector('.domain-group-header');
+
+    await dispatchAndWait(header, { type: 'drop', target: header });
+
+    assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
+    assert.deepStrictEqual(api.state.entries.map(item => item.domain), ['drag.example']);
+    assert.strictEqual(api.state.selectionMode, true, 'failed drop-to-group should keep selection mode active');
+    assert.deepStrictEqual(Array.from(api.state.selectedIds), [entry.id]);
+    assert.deepStrictEqual(api.state.pendingGroupSelectedIds, [entry.id]);
+    assert.strictEqual(api.state.showCreateGroup, true);
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed drop-to-group should not persist entries');
+  }
+
+  {
     const { api } = createHarness();
     const entry = ReadLaterCore.buildEntryFromTab({
       title: 'Grouped page',

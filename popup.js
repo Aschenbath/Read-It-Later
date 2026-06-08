@@ -1195,7 +1195,11 @@ function renderDomainGroup(group) {
     e.preventDefault();
     header.classList.remove('is-drag-over');
     if (state.selectionMode && state.selectedIds.size > 0) {
-      await commitSelectionToGroup(group.domain);
+      try {
+        await commitSelectionToGroup(group.domain);
+      } catch (error) {
+        setStatus(error && error.message ? error.message : 'Could not move pages');
+      }
     }
   });
 

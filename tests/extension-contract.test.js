@@ -244,6 +244,14 @@ assert.ok(
   !popupJs.includes('In selection mode, merge selected entries to this group'),
   'clicking a group in selection mode should open/collapse it instead of silently moving selected entries'
 );
+const groupDropBlock = popupJs.match(/header\.addEventListener\('drop', async \(e\) => \{[\s\S]*?\n  \}\);/)?.[0] || '';
+assert.ok(
+  groupDropBlock.includes('try {') &&
+    groupDropBlock.includes('await commitSelectionToGroup(group.domain);') &&
+    groupDropBlock.includes('catch (error)') &&
+    groupDropBlock.includes('Could not move pages'),
+  'drop-to-group should catch storage failures and surface them instead of leaving an unhandled rejection'
+);
 assert.ok(
   popupJs.includes('async function removeCustomGroup'),
   'empty user-created groups should be removable from the grouped workspace'
