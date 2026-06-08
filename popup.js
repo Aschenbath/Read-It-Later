@@ -3,6 +3,7 @@ const ReadLaterCore = globalThis.ReadLaterCore;
 const storageKey = ReadLaterCore.STORAGE_KEY;
 const expandedDomainsStorageKey = 'readLaterExpandedDomains';
 const viewModeStorageKey = 'readLaterViewMode';
+const customGroupsStorageKey = 'readLaterCustomGroups';
 
 const state = {
   entries: [],
@@ -12,6 +13,7 @@ const state = {
   currentTab: null,
   currentTabEntry: null,
   expandedDomains: new Set(),
+  customGroups: [],
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
   selectedIds: new Set(),
@@ -68,7 +70,8 @@ async function loadEntries() {
     [storageKey]: [],
     openedDomainTabs: {},
     [expandedDomainsStorageKey]: [],
-    [viewModeStorageKey]: 'flat'
+    [viewModeStorageKey]: 'flat',
+    [customGroupsStorageKey]: []
   });
   const entries = Array.isArray(result[storageKey]) ? result[storageKey] : [];
   state.entries = ReadLaterCore.sortEntriesForDisplay(entries.map(entry => ReadLaterCore.normalizeEntry(entry)));
@@ -80,6 +83,9 @@ async function loadEntries() {
     ? result[expandedDomainsStorageKey]
     : [];
   state.expandedDomains = new Set(savedExpandedDomains.filter(domain => typeof domain === 'string' && domain));
+  state.customGroups = Array.isArray(result[customGroupsStorageKey])
+    ? result[customGroupsStorageKey].map(group => ReadLaterCore.cleanText(group)).filter(Boolean)
+    : [];
   state.viewMode = result[viewModeStorageKey] === 'grouped' ? 'grouped' : 'flat';
 
   await refreshCurrentTabState({ render: false, force: true });
@@ -103,6 +109,10 @@ async function persistExpandedDomains() {
 
 async function persistViewMode() {
   await chromeSet({ [viewModeStorageKey]: state.viewMode });
+}
+
+async function persistCustomGroups() {
+  await chromeSet({ [customGroupsStorageKey]: state.customGroups });
 }
 
 function enterSelectionMode() {
@@ -197,6 +207,21 @@ async function mergeSelectionToGroup(targetDomain) {
   await persist(updatedEntries);
 }
 
+async function createCustomGroup(groupName) {
+  const targetDomain = ReadLaterCore.cleanText(groupName);
+  if (!targetDomain) return;
+
+  if (!state.customGroups.includes(targetDomain)) {
+    state.customGroups = [...state.customGroups, targetDomain];
+    await persistCustomGroups();
+  }
+
+  state.expandedDomains.add(targetDomain);
+  await persistExpandedDomains();
+  state.showCreateGroup = false;
+  render();
+}
+
 async function createGroupFromSelection() {
   if (state.selectedIds.size === 0) return;
 
@@ -237,7 +262,7 @@ async function refreshCurrentTabState(options = {}) {
   }
 }
 
-function makeIcon(entry) {
+function makeIcon(entry = {}) {
   const wrap = document.createElement('span');
   wrap.className = 'entry-icon';
   if (entry.favIconUrl) {
@@ -469,8 +494,8 @@ function renderCreateGroupItem() {
       if (groupName) {
         // Disable input during creation to prevent double-submit
         input.disabled = true;
-        await mergeSelectionToGroup(groupName);
-        // After merge, the whole item will be removed from DOM by render()
+        await createCustomGroup(groupName);
+        // After creation, the input row is removed and the new group is visible as a drop target.
         // No need to reset here
       } else {
         // Empty input, just close the input field
@@ -504,7 +529,8 @@ function renderDomainGroup(group) {
   container.className = 'domain-group';
   container.dataset.domain = group.domain;
 
-  const isExpanded = state.expandedDomains.has(group.domain);
+  const hasSelectedEntry = state.selectionMode && group.entries.some(entry => state.selectedIds.has(entry.id));
+  const isExpanded = state.expandedDomains.has(group.domain) || hasSelectedEntry;
 
   const header = document.createElement('button');
   header.className = 'domain-group-header';
@@ -738,17 +764,19 @@ function render() {
     state.showCreateGroup = false;
     document.body.classList.remove('selection-mode');
   }
+  document.body.classList.toggle('flat-view', !state.selectionMode && state.viewMode === 'flat');
 
   const visible = ReadLaterCore.filterEntries(ReadLaterCore.sortEntriesForDisplay(state.entries), state.query);
   state.visibleEntries = visible;
 
   let elements;
-  if (state.viewMode === 'flat') {
+  const effectiveViewMode = state.selectionMode ? 'grouped' : state.viewMode;
+  if (effectiveViewMode === 'flat') {
     // Flat view: render all entries directly without grouping
     elements = visible.map(entry => renderEntry(entry));
   } else {
     // Grouped view: group by domain
-    const groups = ReadLaterCore.groupEntriesByDomain(visible);
+    const groups = ReadLaterCore.groupEntriesByDomain(visible, state.customGroups);
     elements = groups.map(group => {
       if (group.type === 'single') {
         return renderEntry(group.entry);

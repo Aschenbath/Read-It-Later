@@ -94,11 +94,36 @@ assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
+assert.ok(
+  popupJs.includes("const effectiveViewMode = state.selectionMode ? 'grouped' : state.viewMode"),
+  'selection/classification mode should render grouped view so newly created groups are visible as drop targets'
+);
+assert.ok(
+  popupJs.includes("document.body.classList.toggle('flat-view', !state.selectionMode && state.viewMode === 'flat')"),
+  'selection/classification mode should not keep flat-view presentation active'
+);
 assert.ok(popupJs.includes('readLaterExpandedDomains'), 'expanded group state should be stored under a stable key');
 assert.ok(popupJs.includes('readLaterViewMode'), 'grouped/flat view mode should be stored under a stable key');
+assert.ok(popupJs.includes('readLaterCustomGroups'), 'user-created groups should be stored independently from entry domains');
 assert.ok(popupJs.includes('state.expandedDomains = new Set'), 'expanded group state should be restored when the popup opens');
+assert.ok(popupJs.includes('state.customGroups ='), 'user-created groups should be restored when the popup opens');
 assert.ok(popupJs.includes('function persistExpandedDomains'), 'expanded/collapsed group state should be persisted after toggles');
 assert.ok(popupJs.includes('function persistViewMode'), 'grouped/flat view choice should be persisted after toggles');
+assert.ok(popupJs.includes('function persistCustomGroups'), 'user-created groups should be persisted after creation');
+assert.ok(popupJs.includes('async function createCustomGroup'), 'create-group input should create a visible group/drop target first');
+assert.ok(popupJs.includes('await createCustomGroup(groupName);'), 'pressing Enter in create-group input should show a new group, not silently merge selected entries');
+assert.ok(
+  popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, state.customGroups)'),
+  'group rendering should include empty user-created groups as drop targets'
+);
+assert.ok(
+  popupJs.includes('const hasSelectedEntry = state.selectionMode && group.entries.some(entry => state.selectedIds.has(entry.id))'),
+  'selection/classification mode should auto-expand groups containing selected entries'
+);
+assert.ok(
+  popupJs.includes('function makeIcon(entry = {})'),
+  'empty user-created groups should render a fallback icon instead of crashing on undefined entry favIconUrl'
+);
 assert.ok(!popupJs.includes('markAsRead'), 'opening an entry should not maintain read/unread state');
 assert.ok(!popupJs.includes('toggleReadStatus'), 'popup should not expose read/unread toggling');
 assert.ok(!popupJs.includes('is-read'), 'entry rendering should not apply read/unread classes');

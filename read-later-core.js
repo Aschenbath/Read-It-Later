@@ -192,9 +192,19 @@ function isSavableTab(tab) {
   return !!url && !/^(about:|chrome:\/\/newtab|edge:\/\/newtab)$/i.test(url);
 }
 
-function groupEntriesByDomain(entries) {
+function groupEntriesByDomain(entries, customGroups = []) {
   const list = Array.isArray(entries) ? entries : [];
   const byDomain = new Map();
+  const customGroupNames = [];
+
+  for (const group of Array.isArray(customGroups) ? customGroups : []) {
+    const name = cleanText(group);
+    if (name && !byDomain.has(name)) {
+      byDomain.set(name, []);
+      customGroupNames.push(name);
+    }
+  }
+  const customGroupSet = new Set(customGroupNames);
 
   for (const entry of list) {
     const domain = entry.domain || 'unknown';
@@ -206,17 +216,18 @@ function groupEntriesByDomain(entries) {
 
   const groups = [];
   for (const [domain, items] of byDomain) {
+    const isCustomGroup = customGroupSet.has(domain);
     // Check if this domain is a real extracted domain or a user-created group name
     const isRealDomain = items.some(entry => {
       const extractedDomain = domainFromUrl(entry.url);
       return extractedDomain === domain;
     });
 
-    if (items.length === 1 && isRealDomain) {
+    if (items.length === 1 && isRealDomain && !isCustomGroup) {
       // Single entry with real domain: show as single item
       groups.push({ type: 'single', entry: items[0] });
     } else {
-      // Multiple entries, or user-created group: show as group
+      // Multiple entries, empty custom groups, or user-created groups: show as group
       groups.push({ type: 'group', domain, entries: items, count: items.length });
     }
   }

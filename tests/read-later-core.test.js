@@ -6,6 +6,7 @@ const {
   findEntryByUrl,
   formatSavedAt,
   filterEntries,
+  groupEntriesByDomain,
   isSafeIconUrl,
   normalizeEntry,
   normalizeUrl,
@@ -124,3 +125,18 @@ assert.deepStrictEqual(filterEntries(searchable, 'linux').map(entry => entry.tit
 assert.deepStrictEqual(filterEntries(searchable, '统计').map(entry => entry.title), ['统计学 2 小时快速复习']);
 assert.deepStrictEqual(filterEntries(searchable, 'YOUTUBE').map(entry => entry.title), ['Oracle Cloud Always Free']);
 assert.deepStrictEqual(filterEntries(searchable, '   ').map(entry => entry.title), searchable.map(entry => entry.title));
+
+const customGroupOnly = groupEntriesByDomain(searchable, ['Reading Queue']);
+assert.deepStrictEqual(customGroupOnly[0], {
+  type: 'group',
+  domain: 'Reading Queue',
+  entries: [],
+  count: 0
+});
+
+const customGroupWithOneEntry = groupEntriesByDomain([
+  { ...searchable[0], domain: 'Research' }
+], ['Research']);
+assert.strictEqual(customGroupWithOneEntry[0].type, 'group');
+assert.strictEqual(customGroupWithOneEntry[0].domain, 'Research');
+assert.strictEqual(customGroupWithOneEntry[0].count, 1);
