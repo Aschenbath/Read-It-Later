@@ -107,7 +107,7 @@
 | 2. 点击其他条目选择 | 多选要分组的网页 |
 | 3. 拖拽到目标分组 | 将选中条目移动到现有分组 |
 | 4. 或点击右上角 `+` 新建分组 | 输入分组名称后，选中的条目会直接移入新分组并退出选择模式 |
-| 5. 批量删除 | 选择模式下点击 🗑️ 按钮或按 `Delete` 键 |
+| 5. 批量删除 | 选择模式下点击删除按钮或按 `Delete` 键 |
 | 6. 退出选择模式 | 点击搜索框右侧的 `×` 或按 `ESC` 键 |
 
 ### 分组批量操作
@@ -370,7 +370,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 | 2. Click other entries to select | Multi-select pages to group |
 | 3. Drag to target group | Move selected entries to existing group |
 | 4. Or click top-right `+` to create a group | Enter a group name; selected entries move into it immediately and selection mode exits |
-| 5. Batch delete | In selection mode, click 🗑️ button or press `Delete` key |
+| 5. Batch delete | In selection mode, click the delete button or press `Delete` key |
 | 6. Exit selection mode | Click `×` on right of search box or press `ESC` |
 
 ### Group Batch Operations

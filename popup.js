@@ -840,10 +840,10 @@ function renderDomainGroup(group) {
   return container;
 }
 
-function renderEmptyState(visible) {
+function renderEmptyState(visible, renderedCount = visible.length) {
   const isEmpty = state.entries.length === 0;
   const hasNoMatches = !isEmpty && state.query;
-  els.emptyState.classList.toggle('hidden', visible.length !== 0);
+  els.emptyState.classList.toggle('hidden', renderedCount !== 0);
   els.emptyTitle.textContent = hasNoMatches ? 'No matching pages' : 'No pages yet';
   els.emptyCopy.textContent = hasNoMatches
     ? 'Clear the search to return to your saved reading queue.'
@@ -899,7 +899,8 @@ function render() {
     elements = visible.map(entry => renderEntry(entry));
   } else {
     // Grouped view: group by domain
-    const groups = ReadLaterCore.groupEntriesByDomain(visible, state.customGroups);
+    const customGroupsForRender = state.query && !state.selectionMode ? [] : state.customGroups;
+    const groups = ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender);
     elements = groups.map(group => {
       if (group.type === 'single') {
         return renderEntry(group.entry);
@@ -919,7 +920,7 @@ function render() {
   }
 
   els.entriesList.replaceChildren(...elements);
-  renderEmptyState(visible);
+  renderEmptyState(visible, elements.length);
   renderAddButtonState();
 
   // Update search box based on selection mode

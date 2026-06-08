@@ -35,6 +35,7 @@ assert.strictEqual(
 );
 
 const html = read('popup.html');
+const readme = read('README.md');
 assert.ok(html.includes('<link rel="stylesheet" href="styles.css">'));
 assert.ok(html.includes('<script src="read-later-core.js"></script>'));
 assert.ok(html.includes('<script src="popup.js"></script>'));
@@ -72,6 +73,14 @@ assert.ok(!popupJs.includes('innerHTML = entry.domain'));
 assert.ok(popupJs.includes('function renderEmptyState'), 'popup should render an empty-state that changes for empty list vs no matches');
 assert.ok(popupJs.includes("els.emptyActionBtn.dataset.action = hasNoMatches ? 'clear' : 'add'"), 'empty-state action should clear only for no-match searches');
 assert.ok(popupJs.includes("els.clearSearchBtn.addEventListener('click'"), 'search should have a one-click clear control');
+assert.ok(
+  popupJs.includes('function renderEmptyState(visible, renderedCount = visible.length)'),
+  'empty-state visibility should account for rendered empty custom groups, not only visible entries'
+);
+assert.ok(
+  popupJs.includes('renderEmptyState(visible, elements.length)'),
+  'render should hide the empty-state when empty custom groups are rendered'
+);
 const enterSelectionModeBlock = popupJs.match(/function enterSelectionMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(!enterSelectionModeBlock.includes('render();'), 'long-press selection should not render an empty selection state before selecting the pressed entry');
 assert.ok(
@@ -175,8 +184,12 @@ assert.ok(!popupJs.includes('prompt('), 'manual grouping should use the inline c
 const createCustomGroupBlock = popupJs.match(/async function createCustomGroup\(groupName\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(!createCustomGroupBlock.includes('state.expandedDomains.add(targetDomain);'), 'empty custom group creation should not persist an expanded empty panel');
 assert.ok(
-  popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, state.customGroups)'),
-  'group rendering should include empty user-created groups as drop targets'
+  popupJs.includes('const customGroupsForRender = state.query && !state.selectionMode ? [] : state.customGroups'),
+  'normal search should not keep unrelated empty custom groups visible'
+);
+assert.ok(
+  popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender)'),
+  'group rendering should include empty user-created groups only when they are useful as visible groups/drop targets'
 );
 assert.ok(
   popupJs.includes('const isExpanded = state.expandedDomains.has(group.domain);'),
@@ -264,7 +277,8 @@ assert.ok(!icon.includes('<rect x="82" y="61" width="24"'), 'old plus-only icon 
 
 assert.ok(popupJs.includes("delIcon.className = 'delete-icon'"), 'delete button should use a styled icon span');
 assert.ok(!popupJs.includes('del.textContent'), 'delete button should not depend on a text glyph');
-assert.ok(!html.includes('🗑'), 'bulk delete button should not depend on an emoji glyph');
+assert.ok(!html.includes('\u{1f5d1}'), 'bulk delete button should not depend on an emoji glyph');
+assert.ok(!readme.includes('\u{1f5d1}'), 'README should describe the CSS delete button without promising an emoji glyph');
 assert.ok(popupJs.includes("del.setAttribute('aria-label'"), 'delete button should keep an accessible label');
 
 assert.ok(backgroundJs.includes('ReadLaterCore.STORAGE_KEY'), 'background shortcut should use the shared storage key');
