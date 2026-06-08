@@ -277,6 +277,12 @@ function renderEntry(entry) {
   item.classList.toggle('is-read', !!entry.isRead);
   item.classList.toggle('is-selected', state.selectedIds.has(entry.id));
 
+  // Add entrance animation for newly added entries (within last 2 seconds)
+  const entryAge = Date.now() - entry.timestamp;
+  if (entryAge < 2000) {
+    item.style.animation = 'entryIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  }
+
   // Make entry draggable in selection mode
   if (state.selectionMode && state.selectedIds.has(entry.id)) {
     item.draggable = true;

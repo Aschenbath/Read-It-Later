@@ -417,6 +417,8 @@ h1 {
 /* Selection mode - lightweight */
 .entry-card.is-selected {
   background: rgba(79, 155, 133, 0.08);
+  border-color: rgba(79, 155, 133, 0.3);
+  box-shadow: 0 2px 8px rgba(79, 155, 133, 0.15);
 }
 
 .entry-card.is-selected .entry-open-button {
@@ -427,10 +429,13 @@ h1 {
 .entry-card.is-dragging {
   opacity: 0.5;
   cursor: move;
+  transform: rotate(2deg) scale(0.98);
+  box-shadow: 0 8px 24px rgba(79, 155, 133, 0.35);
 }
 
 .selection-mode .entry-card {
   cursor: pointer;
+  transition: all 0.18s ease;
 }
 
 .selection-mode .entry-card.is-selected {
@@ -446,13 +451,30 @@ h1 {
   border-color: var(--accent);
   background: rgba(79, 155, 133, 0.04);
   transition: all 0.2s ease;
+  position: relative;
+}
+
+.selection-mode .domain-group-header::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px dashed var(--accent);
+  border-radius: 14px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.selection-mode .domain-group-header:hover::after,
+.selection-mode .domain-group-header.is-drag-over::after {
+  opacity: 0.5;
 }
 
 .selection-mode .domain-group-header:hover,
 .selection-mode .domain-group-header.is-drag-over {
   background: rgba(79, 155, 133, 0.18);
   border-color: var(--accent);
-  transform: scale(1.01);
+  transform: scale(1.02);
+  box-shadow: 0 6px 18px rgba(79, 155, 133, 0.25);
 }
 
 .add-button.is-selection-mode .add-icon {
@@ -486,17 +508,36 @@ h1 {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.create-group-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(79, 155, 133, 0.08), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.create-group-button:hover::before {
+  opacity: 1;
 }
 
 .create-group-button:hover {
   background: rgba(79, 155, 133, 0.12);
   border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 155, 133, 0.2);
 }
 
 .create-group-button.is-drag-over {
   background: rgba(79, 155, 133, 0.18);
   border-color: var(--accent);
+  border-style: solid;
   transform: scale(1.02);
+  box-shadow: 0 6px 18px rgba(79, 155, 133, 0.3);
 }
 
 .create-group-input-wrap {
