@@ -235,8 +235,9 @@ async function loadEntries() {
 }
 
 async function persist(entries) {
-  state.entries = ReadLaterCore.sortEntriesForDisplay(entries);
-  await setPopupStorage({ [storageKey]: state.entries });
+  const nextEntries = ReadLaterCore.sortEntriesForDisplay(entries);
+  await setPopupStorage({ [storageKey]: nextEntries });
+  state.entries = nextEntries;
   render();
 }
 
@@ -388,30 +389,34 @@ async function commitSelectionToGroup(targetDomain, options = {}) {
     return { ...entry, domain: groupName };
   });
 
-  state.showCreateGroup = false;
-  state.selectionMode = false;
-  state.selectedIds.clear();
-  state.pendingGroupSelectedIds = [];
-  state.emptyGroupDeleteArmed.delete(groupName);
-  document.body.classList.remove('selection-mode');
-
   if (movedCount === 0) {
     setStatus('Select pages before creating a group');
     render();
     return false;
   }
 
-  if (!state.customGroups.includes(groupName)) {
-    state.customGroups = [...state.customGroups, groupName];
-  }
-  state.expandedDomains.delete(groupName);
-  state.entries = ReadLaterCore.sortEntriesForDisplay(updatedEntries);
+  const nextCustomGroups = state.customGroups.includes(groupName)
+    ? state.customGroups
+    : [...state.customGroups, groupName];
+  const nextExpandedDomains = new Set(state.expandedDomains);
+  nextExpandedDomains.delete(groupName);
+  const nextEntries = ReadLaterCore.sortEntriesForDisplay(updatedEntries);
 
   await setPopupStorage({
-    [storageKey]: state.entries,
-    [customGroupsStorageKey]: state.customGroups,
-    [expandedDomainsStorageKey]: Array.from(state.expandedDomains)
+    [storageKey]: nextEntries,
+    [customGroupsStorageKey]: nextCustomGroups,
+    [expandedDomainsStorageKey]: Array.from(nextExpandedDomains)
   });
+
+  state.showCreateGroup = false;
+  state.selectionMode = false;
+  state.selectedIds.clear();
+  state.pendingGroupSelectedIds = [];
+  state.emptyGroupDeleteArmed.delete(groupName);
+  document.body.classList.remove('selection-mode');
+  state.customGroups = nextCustomGroups;
+  state.expandedDomains = nextExpandedDomains;
+  state.entries = nextEntries;
   render();
   return true;
 }
@@ -420,18 +425,22 @@ async function createCustomGroup(groupName) {
   const targetDomain = ReadLaterCore.cleanText(groupName);
   if (!targetDomain) return;
 
-  if (!state.customGroups.includes(targetDomain)) {
-    state.customGroups = [...state.customGroups, targetDomain];
-  }
+  const nextCustomGroups = state.customGroups.includes(targetDomain)
+    ? state.customGroups
+    : [...state.customGroups, targetDomain];
+  const nextExpandedDomains = new Set(state.expandedDomains);
+  nextExpandedDomains.delete(targetDomain);
 
-  state.expandedDomains.delete(targetDomain);
+  await setPopupStorage({
+    [customGroupsStorageKey]: nextCustomGroups,
+    [expandedDomainsStorageKey]: Array.from(nextExpandedDomains)
+  });
+
+  state.customGroups = nextCustomGroups;
+  state.expandedDomains = nextExpandedDomains;
   state.emptyGroupDeleteArmed.delete(targetDomain);
   state.showCreateGroup = false;
   state.pendingGroupSelectedIds = [];
-  await Promise.all([
-    persistCustomGroups(),
-    persistExpandedDomains()
-  ]);
   render();
 }
 
@@ -439,13 +448,18 @@ async function removeCustomGroup(groupName) {
   const targetDomain = ReadLaterCore.cleanText(groupName);
   if (!targetDomain) return;
 
-  state.customGroups = state.customGroups.filter(group => group !== targetDomain);
-  state.expandedDomains.delete(targetDomain);
+  const nextCustomGroups = state.customGroups.filter(group => group !== targetDomain);
+  const nextExpandedDomains = new Set(state.expandedDomains);
+  nextExpandedDomains.delete(targetDomain);
+
+  await setPopupStorage({
+    [customGroupsStorageKey]: nextCustomGroups,
+    [expandedDomainsStorageKey]: Array.from(nextExpandedDomains)
+  });
+
+  state.customGroups = nextCustomGroups;
+  state.expandedDomains = nextExpandedDomains;
   state.emptyGroupDeleteArmed.delete(targetDomain);
-  await Promise.all([
-    persistCustomGroups(),
-    persistExpandedDomains()
-  ]);
   render();
 }
 
@@ -591,7 +605,12 @@ async function removeEntry(entry) {
     });
   }
 
-  await persist(next.entries);
+  try {
+    await persist(next.entries);
+  } catch (error) {
+    render();
+    throw error;
+  }
 }
 
 function renderEntry(entry) {
@@ -701,7 +720,11 @@ function renderEntry(entry) {
     }
   });
 
-  del.addEventListener('click', () => removeEntry(entry));
+  del.addEventListener('click', () => {
+    removeEntry(entry).catch((error) => {
+      setStatus(error && error.message ? error.message : 'Could not remove page');
+    });
+  });
 
   // Drag events for selection mode
   item.addEventListener('dragstart', (e) => {
@@ -780,11 +803,16 @@ function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
         input.disabled = true;
         const targetDomain = ReadLaterCore.cleanText(groupName);
 
-        if (pendingSelectedIds.length > 0) {
-          await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });
-        } else {
-          // No selection: just create empty group as drop target
-          await createCustomGroup(groupName);
+        try {
+          if (pendingSelectedIds.length > 0) {
+            await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });
+          } else {
+            // No selection: just create empty group as drop target
+            await createCustomGroup(groupName);
+          }
+        } catch (error) {
+          input.disabled = false;
+          setStatus(error && error.message ? error.message : 'Could not create group');
         }
       } else {
         // Empty input, just close the input field
@@ -864,10 +892,9 @@ function renderDomainGroup(group) {
 
     const wasExpanded = state.emptyGroupDeleteArmed.has(group.domain);
     if (group.count === 0 && wasExpanded) {
-      removeCustomGroup(group.domain).catch((error) => {
+      return removeCustomGroup(group.domain).catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not remove group');
       });
-      return;
     }
 
     state.emptyGroupDeleteArmed.add(group.domain);

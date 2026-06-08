@@ -238,6 +238,7 @@ function instrumentPopup(source) {
       '  render,',
       '  loadEntries,',
       '  addCurrentPage,',
+      '  removeEntry,',
       '  toggleViewMode,',
       '  init,',
       '  persistExpandedDomains,',
@@ -253,6 +254,7 @@ function instrumentPopup(source) {
 function createHarness(options = {}) {
   const activeTab = options.tab || null;
   const getError = options.getError || '';
+  const setError = options.setError || '';
   const createResults = Array.isArray(options.createResults) ? [...options.createResults] : [];
   const removeFailures = new Set(options.removeFailures || []);
   const removeFailureMessages = options.removeFailureMessages || {};
@@ -285,6 +287,12 @@ function createHarness(options = {}) {
           },
           set(values, callback) {
             setCalls.push(values);
+            if (setError) {
+              context.chrome.runtime.lastError = { message: setError };
+              callback();
+              context.chrome.runtime.lastError = null;
+              return;
+            }
             const changes = {};
             Object.entries(values || {}).forEach(([key, newValue]) => {
               changes[key] = {
@@ -418,6 +426,98 @@ async function main() {
   }
 
   {
+    const { api, storage } = createHarness({
+      tab: { title: 'Unsaved Docs', url: 'https://docs.example/unsaved' },
+      setError: 'Storage write failed'
+    });
+    api.init();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    await api.addCurrentPage();
+
+    assert.deepStrictEqual(api.state.entries, [], 'failed add should roll back in-memory entries');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed add should not persist entries');
+    assert.strictEqual(api.state.currentTabEntry, null, 'failed add should not mark the current tab as saved');
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Keep me visible',
+      url: 'https://docs.example/keep'
+    }, 1000);
+    api.state.entries = [entry];
+    api.render();
+
+    await assert.rejects(
+      () => api.removeEntry(entry),
+      /Storage write failed/
+    );
+
+    assert.deepStrictEqual(api.state.entries.map(item => item.id), [entry.id], 'failed remove should keep in-memory entry');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed remove should not persist deletion');
+    const card = api.els.entriesList.querySelector(`[data-id="${entry.id}"]`);
+    assert.ok(card, 'failed remove should render the original card again');
+    assert.strictEqual(card.classList.contains('leaving'), false, 'failed remove should not leave the card in its exit state');
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+
+    await assert.rejects(
+      () => api.createCustomGroup('Draft Group'),
+      /Storage write failed/
+    );
+
+    assert.deepStrictEqual(Array.from(api.state.customGroups), [], 'failed empty group creation should roll back custom groups');
+    assert.strictEqual(api.state.expandedDomains.has('Draft Group'), false);
+    assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Draft Group'), false);
+    assert.strictEqual(storage.readLaterCustomGroups, undefined, 'failed empty group creation should not persist custom groups');
+  }
+
+  {
+    const { api } = createHarness({ setError: 'Storage write failed' });
+    const item = api.renderCreateGroupItem([]);
+    item.querySelector('.create-group-button').click();
+    const input = item.querySelector('.create-group-input');
+    input.value = 'Draft Group';
+
+    await dispatchAndWait(input, { type: 'keydown', key: 'Enter' });
+
+    assert.strictEqual(input.disabled, false, 'failed inline group creation should unlock the input');
+    assert.deepStrictEqual(Array.from(api.state.customGroups), []);
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Move me later',
+      url: 'https://docs.example/move'
+    }, 1000);
+    api.state.entries = [entry];
+    api.state.selectionMode = true;
+    api.state.selectedIds.add(entry.id);
+    api.state.pendingGroupSelectedIds = [entry.id];
+    api.state.showCreateGroup = true;
+    api.state.emptyGroupDeleteArmed.add('Docs');
+
+    await assert.rejects(
+      () => api.commitSelectionToGroup('Docs'),
+      /Storage write failed/
+    );
+
+    assert.strictEqual(api.state.selectionMode, true, 'failed group move should keep selection mode active');
+    assert.deepStrictEqual(Array.from(api.state.selectedIds), [entry.id]);
+    assert.deepStrictEqual(api.state.pendingGroupSelectedIds, [entry.id]);
+    assert.strictEqual(api.state.showCreateGroup, true);
+    assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Docs'), true);
+    assert.deepStrictEqual(Array.from(api.state.customGroups), []);
+    assert.strictEqual(api.state.entries[0].domain, 'docs.example');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed group move should not persist entries');
+  }
+
+  {
     const { api } = createHarness();
     const entry = ReadLaterCore.buildEntryFromTab({
       title: 'Grouped page',
@@ -484,15 +584,13 @@ async function main() {
     assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Empty'), false);
     assert.deepStrictEqual(Array.from(api.state.customGroups), ['Empty']);
 
-    chevron.click();
+    await dispatchAndWait(chevron, { type: 'click', target: chevron, bubbles: true });
 
     assert.strictEqual(api.state.expandedDomains.has('Empty'), false);
     assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Empty'), true);
     assert.deepStrictEqual(Array.from(api.state.customGroups), ['Empty']);
 
-    chevron.click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await dispatchAndWait(chevron, { type: 'click', target: chevron, bubbles: true });
 
     assert.strictEqual(api.state.expandedDomains.has('Empty'), false);
     assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Empty'), false);
