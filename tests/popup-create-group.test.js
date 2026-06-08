@@ -253,8 +253,12 @@ function instrumentPopup(source) {
 function createHarness(options = {}) {
   const activeTab = options.tab || null;
   const getError = options.getError || '';
+  const createResults = Array.isArray(options.createResults) ? [...options.createResults] : [];
+  const removeFailures = new Set(options.removeFailures || []);
   const document = new TestDocument();
   const storage = {};
+  const createdTabs = [];
+  const removedTabs = [];
   const getCalls = [];
   const setCalls = [];
   const changeListeners = [];
@@ -302,8 +306,22 @@ function createHarness(options = {}) {
         query(query, callback) {
           callback(activeTab ? [activeTab] : []);
         },
-        create() {},
-        remove() {}
+        async create(args) {
+          createdTabs.push(args);
+          const next = createResults.length > 0
+            ? createResults.shift()
+            : { id: 1000 + createdTabs.length };
+          if (next instanceof Error) {
+            throw next;
+          }
+          return next;
+        },
+        async remove(tabId) {
+          removedTabs.push(tabId);
+          if (removeFailures.has(tabId)) {
+            throw new Error(`Could not close tab ${tabId}`);
+          }
+        }
       }
     },
     CSS: {
@@ -352,7 +370,7 @@ function createHarness(options = {}) {
     viewModeBtn: elementById('viewModeBtn', 'button')
   });
 
-  return { api, changeListeners, document, getCalls, setCalls, storage };
+  return { api, changeListeners, createdTabs, document, getCalls, removedTabs, setCalls, storage };
 }
 
 async function dispatchAndWait(element, event) {
@@ -728,6 +746,62 @@ async function main() {
     assert.strictEqual(api.els.viewModeBtn.disabled, true);
     assert.strictEqual(api.els.viewModeBtn.title, 'Grouped view is locked while organizing');
     assert.strictEqual(api.els.viewModeBtn.getAttribute('aria-label'), 'Grouped view is locked while organizing');
+  }
+
+  {
+    const { api, createdTabs, storage } = createHarness({
+      createResults: [
+        { id: 101 },
+        new Error('Cannot open second tab'),
+        { id: 103 }
+      ]
+    });
+    const entries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs A', url: 'https://docs.example/a' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs B', url: 'https://docs.example/b' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs C', url: 'https://docs.example/c' }, 1000)
+    ].map(entry => ({ ...entry, domain: 'Docs' }));
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries,
+      count: entries.length
+    });
+    const button = node.querySelector('.domain-group-action-btn');
+
+    await dispatchAndWait(button, { type: 'click', target: button });
+
+    assert.strictEqual(createdTabs.length, 3, 'batch open should keep trying entries after one create failure');
+    assert.deepStrictEqual(Array.from(api.state.openedDomainTabs.get('Docs')), [101, 103]);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(storage.openedDomainTabs)), { Docs: [101, 103] });
+    assert.strictEqual(button.classList.contains('is-opened'), true);
+    assert.strictEqual(button.title, 'Close all 3 tabs');
+    assert.strictEqual(api.els.statusText.textContent, 'Opened 2 of 3 pages; 1 failed');
+  }
+
+  {
+    const { api, removedTabs, storage } = createHarness({ removeFailures: [202] });
+    api.state.openedDomainTabs.set('Docs', [201, 202, 203]);
+    const entry = {
+      ...ReadLaterCore.buildEntryFromTab({ title: 'Docs A', url: 'https://docs.example/a' }, 1000),
+      domain: 'Docs'
+    };
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries: [entry],
+      count: 1
+    });
+    const button = node.querySelector('.domain-group-action-btn');
+
+    await dispatchAndWait(button, { type: 'click', target: button });
+
+    assert.deepStrictEqual(removedTabs, [201, 202, 203], 'batch close should attempt every tracked tab');
+    assert.deepStrictEqual(Array.from(api.state.openedDomainTabs.get('Docs')), [202]);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(storage.openedDomainTabs)), { Docs: [202] });
+    assert.strictEqual(button.classList.contains('is-opened'), true);
+    assert.strictEqual(button.title, 'Close all 1 tab');
+    assert.strictEqual(api.els.statusText.textContent, 'Closed 2 of 3 tabs; 1 failed');
   }
 
   {

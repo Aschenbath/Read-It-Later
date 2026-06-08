@@ -193,6 +193,16 @@ function normalizeOpenedDomainTabs(value) {
   return normalized;
 }
 
+function pageCountLabel(count) {
+  const value = Number(count) || 0;
+  return `${value} ${value === 1 ? 'page' : 'pages'}`;
+}
+
+function tabCountLabel(count) {
+  const value = Number(count) || 0;
+  return `${value} ${value === 1 ? 'tab' : 'tabs'}`;
+}
+
 async function loadEntries() {
   const result = await chromeGet({
     [storageKey]: [],
@@ -886,8 +896,8 @@ function renderDomainGroup(group) {
     toggleBtn.dataset.domain = group.domain;
 
     const isOpened = state.openedDomainTabs.has(group.domain);
-    toggleBtn.title = isOpened ? `Close all ${group.count} tabs` : `Open all ${group.count} pages`;
-    toggleBtn.setAttribute('aria-label', isOpened ? `Close all ${group.count} tabs from ${group.domain}` : `Open all ${group.count} pages from ${group.domain}`);
+    toggleBtn.title = isOpened ? `Close all ${tabCountLabel(group.count)}` : `Open all ${pageCountLabel(group.count)}`;
+    toggleBtn.setAttribute('aria-label', isOpened ? `Close all ${tabCountLabel(group.count)} from ${group.domain}` : `Open all ${pageCountLabel(group.count)} from ${group.domain}`);
     toggleBtn.innerHTML = isOpened
       ? '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>'
       : '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
@@ -915,32 +925,52 @@ function renderDomainGroup(group) {
           const tabIds = Array.isArray(state.openedDomainTabs.get(domain))
             ? state.openedDomainTabs.get(domain).filter(tabId => Number.isInteger(tabId))
             : [];
+          const failedTabIds = [];
           for (const tabId of tabIds) {
             try {
               await chrome.tabs.remove(tabId);
             } catch (err) {
-              // Tab might already be closed manually.
+              failedTabIds.push(tabId);
             }
           }
-          state.openedDomainTabs.delete(domain);
+          if (failedTabIds.length > 0) {
+            state.openedDomainTabs.set(domain, failedTabIds);
+          } else {
+            state.openedDomainTabs.delete(domain);
+          }
           await persistOpenedTabs();
 
           // Update button UI
           const iconSpan = toggleBtn.querySelector('.action-icon');
-          if (iconSpan) {
-            iconSpan.className = 'action-icon action-icon-open-all';
+          if (failedTabIds.length > 0) {
+            if (iconSpan) {
+              iconSpan.className = 'action-icon action-icon-close-all';
+            }
+            toggleBtn.classList.add('is-opened');
+            toggleBtn.title = `Close all ${tabCountLabel(failedTabIds.length)}`;
+            toggleBtn.setAttribute('aria-label', `Close all ${tabCountLabel(failedTabIds.length)} from ${group.domain}`);
+            setStatus(`Closed ${tabIds.length - failedTabIds.length} of ${tabIds.length} tabs; ${failedTabIds.length} failed`, { autoClear: false });
+          } else {
+            if (iconSpan) {
+              iconSpan.className = 'action-icon action-icon-open-all';
+            }
+            toggleBtn.classList.remove('is-opened');
+            toggleBtn.title = `Open all ${pageCountLabel(group.count)}`;
+            toggleBtn.setAttribute('aria-label', `Open all ${pageCountLabel(group.count)} from ${group.domain}`);
           }
-          toggleBtn.classList.remove('is-opened');
-          toggleBtn.title = `Open all ${group.count} pages`;
-          toggleBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
         } else {
           // Open all tabs for this domain
           const tabIds = [];
+          let failedCount = 0;
           for (const entry of group.entries) {
             if (entry && entry.url) {
-              const tab = await chrome.tabs.create({ url: entry.url, active: false });
-              if (tab && Number.isInteger(tab.id)) {
-                tabIds.push(tab.id);
+              try {
+                const tab = await chrome.tabs.create({ url: entry.url, active: false });
+                if (tab && Number.isInteger(tab.id)) {
+                  tabIds.push(tab.id);
+                }
+              } catch (err) {
+                failedCount += 1;
               }
             }
           }
@@ -955,13 +985,21 @@ function renderDomainGroup(group) {
               iconSpan.className = 'action-icon action-icon-close-all';
             }
             toggleBtn.classList.add('is-opened');
-            toggleBtn.title = `Close all ${group.count} tabs`;
-            toggleBtn.setAttribute('aria-label', `Close all ${group.count} tabs from ${group.domain}`);
+            toggleBtn.title = `Close all ${tabCountLabel(group.count)}`;
+            toggleBtn.setAttribute('aria-label', `Close all ${tabCountLabel(group.count)} from ${group.domain}`);
+            if (failedCount > 0) {
+              setStatus(`Opened ${tabIds.length} of ${group.entries.length} pages; ${failedCount} failed`, { autoClear: false });
+            }
           } else {
             state.openedDomainTabs.delete(domain);
             await persistOpenedTabs();
+            if (failedCount > 0) {
+              setStatus(`Could not open ${failedCount === 1 ? 'page' : 'pages'}`, { autoClear: false });
+            }
           }
         }
+      } catch (error) {
+        setStatus(error && error.message ? error.message : 'Could not update tab state', { autoClear: false });
       } finally {
         toggleBtn.disabled = false;
       }
