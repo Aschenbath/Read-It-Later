@@ -32,6 +32,7 @@ function byId(id) {
 
 function setStatus(text, options = {}) {
   els.statusText.textContent = text || '';
+  els.statusText.classList.remove('is-fading');
 
   // Clear any existing timer
   if (statusTimer) {
@@ -43,7 +44,12 @@ function setStatus(text, options = {}) {
   if (text && options.autoClear !== false) {
     const delay = options.delay || 3000;
     statusTimer = setTimeout(() => {
-      els.statusText.textContent = '';
+      // Fade out before clearing
+      els.statusText.classList.add('is-fading');
+      setTimeout(() => {
+        els.statusText.textContent = '';
+        els.statusText.classList.remove('is-fading');
+      }, 300); // Match CSS transition duration
       statusTimer = null;
     }, delay);
   }

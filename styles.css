@@ -121,6 +121,21 @@ h1 {
   box-shadow: none;
 }
 
+.add-button:disabled .add-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+}
+
 .add-button.is-saved {
   border-color: #6aa690;
   background: #fffdf8;
@@ -933,6 +948,16 @@ h1 {
   border-radius: 12px;
   background: #fffdf8;
   box-shadow: 7px 8px 0 rgba(79, 155, 133, 0.16);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .empty-mark::before {
@@ -1008,6 +1033,12 @@ h1 {
   color: #6d767c;
   font-size: 12px;
   line-height: 18px;
+  opacity: 1;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.status-text.is-fading {
+  opacity: 0;
 }
 
 .hidden {
