@@ -56,6 +56,10 @@ assert.strictEqual((html.match(/<script/g) || []).length, 2);
 assert.ok(html.includes('role="list"'), 'entries list should expose list semantics');
 assert.ok(!html.includes('\u9983'), 'popup HTML should not expose mojibake glyphs');
 assert.ok(html.includes('class="delete-selected-icon"'), 'bulk delete should use a styled icon span instead of a text glyph');
+assert.ok(
+  /id="viewModeBtn"[\s\S]*title="Show grouped view"[\s\S]*aria-label="Show grouped view"/.test(html),
+  'initial view-mode button label should match the default flat view next action'
+);
 
 const popupJs = read('popup.js');
 const backgroundJs = read('background.js');
