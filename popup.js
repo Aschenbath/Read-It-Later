@@ -117,6 +117,37 @@ function toggleSelection(entryId) {
   render();
 }
 
+async function deleteSelectedEntries() {
+  if (state.selectedIds.size === 0) return;
+
+  const idsToDelete = Array.from(state.selectedIds);
+  const newEntries = state.entries.filter(e => !idsToDelete.includes(e.id));
+
+  // Add leaving animation to all selected cards
+  const cards = idsToDelete.map(id =>
+    els.entriesList.querySelector(`[data-id="${CSS.escape(id)}"]`)
+  ).filter(Boolean);
+
+  cards.forEach(card => {
+    if (!card.classList.contains('leaving')) {
+      card.classList.add('leaving');
+    }
+  });
+
+  // Wait for animation
+  if (cards.length > 0) {
+    await new Promise(resolve => setTimeout(resolve, 160));
+  }
+
+  await persist(newEntries);
+
+  // Exit selection mode after deletion
+  state.selectionMode = false;
+  state.selectedIds.clear();
+  state.showCreateGroup = false;
+  document.body.classList.remove('selection-mode');
+}
+
 async function mergeSelectionToGroup(targetDomain) {
   console.log('[mergeSelectionToGroup] START', {
     targetDomain,
@@ -762,6 +793,9 @@ function render() {
       els.clearSearchBtn.classList.remove('hidden');
       els.clearSearchBtn.title = 'Exit selection mode';
       els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
+      els.deleteSelectedBtn.classList.remove('hidden');
+      els.deleteSelectedBtn.title = `Delete ${state.selectedIds.size} selected`;
+      els.deleteSelectedBtn.setAttribute('aria-label', `Delete ${state.selectedIds.size} selected`);
     } else {
       // In selection mode but no items selected
       // Search query already cleared at the start of render()
@@ -771,6 +805,7 @@ function render() {
       els.clearSearchBtn.classList.remove('hidden'); // Keep exit button visible
       els.clearSearchBtn.title = 'Exit selection mode';
       els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
+      els.deleteSelectedBtn.classList.add('hidden'); // Hide delete button when nothing selected
     }
   } else {
     // Normal mode
@@ -778,6 +813,7 @@ function render() {
     els.clearSearchBtn.classList.toggle('hidden', !state.query);
     els.clearSearchBtn.title = 'Clear search';
     els.clearSearchBtn.setAttribute('aria-label', 'Clear search');
+    els.deleteSelectedBtn.classList.add('hidden'); // Always hide in normal mode
   }
 }
 
@@ -862,6 +898,7 @@ function bind() {
       setSearch('');
     }
   });
+  els.deleteSelectedBtn.addEventListener('click', deleteSelectedEntries);
   els.viewModeBtn.addEventListener('click', toggleViewMode);
 
   // Debounce search input for performance
@@ -928,6 +965,13 @@ function bind() {
       return;
     }
     if (event.key === 'Delete') {
+      // In selection mode, delete all selected entries
+      if (state.selectionMode && state.selectedIds.size > 0) {
+        event.preventDefault();
+        deleteSelectedEntries();
+        return;
+      }
+      // In normal mode, delete focused entry
       const entry = focusedEntry();
       if (entry) {
         event.preventDefault();
@@ -952,6 +996,7 @@ function init() {
   els.emptyCopy = byId('emptyCopy');
   els.searchInput = byId('searchInput');
   els.clearSearchBtn = byId('clearSearchBtn');
+  els.deleteSelectedBtn = byId('deleteSelectedBtn');
   els.viewModeBtn = byId('viewModeBtn');
   els.entriesList = byId('entriesList');
   els.emptyState = byId('emptyState');

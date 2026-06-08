@@ -286,6 +286,38 @@ h1 {
   background: rgba(79, 155, 133, 0.15);
 }
 
+.delete-selected-button {
+  position: absolute;
+  right: 38px;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #d64545;
+  cursor: pointer;
+  transform: translateY(-50%);
+  font-size: 15px;
+  transition: all 0.15s ease;
+}
+
+.delete-selected-button:hover {
+  background: rgba(214, 69, 69, 0.12);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.delete-selected-button:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.delete-selected-button.hidden {
+  display: none;
+}
+
 .search-clear-button {
   position: absolute;
   right: 7px;
