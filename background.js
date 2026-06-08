@@ -60,10 +60,20 @@ function showNotification(title, message) {
     title: title,
     message: message,
     silent: true
+  }, () => {
+    const err = chrome.runtime && chrome.runtime.lastError;
+    if (err) {
+      console.error('Failed to create notification:', err.message || String(err));
+    }
   });
 
   // Auto-clear notification after 2 seconds
   setTimeout(() => {
-    chrome.notifications.clear(notificationId);
+    chrome.notifications.clear(notificationId, () => {
+      const err = chrome.runtime && chrome.runtime.lastError;
+      if (err) {
+        console.error('Failed to clear notification:', err.message || String(err));
+      }
+    });
   }, 2000);
 }

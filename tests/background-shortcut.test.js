@@ -7,7 +7,14 @@ const root = path.resolve(__dirname, '..');
 const backgroundSource = fs.readFileSync(path.join(root, 'background.js'), 'utf8');
 const ReadLaterCore = require('../read-later-core');
 
-function createHarness({ tab, storage = {}, getError = '', setError = '' }) {
+function createHarness({
+  tab,
+  storage = {},
+  getError = '',
+  setError = '',
+  notificationCreateError = '',
+  notificationClearError = ''
+}) {
   const env = {
     clearedNotifications: [],
     errors: [],
@@ -21,6 +28,7 @@ function createHarness({ tab, storage = {}, getError = '', setError = '' }) {
 
   const context = {
     chrome: {
+      runtime: {},
       commands: {
         onCommand: {
           addListener(listener) {
@@ -29,11 +37,29 @@ function createHarness({ tab, storage = {}, getError = '', setError = '' }) {
         }
       },
       notifications: {
-        create(id, options) {
+        create(id, options, callback) {
           env.notifications.push({ id, options });
+          if (typeof callback === 'function') {
+            if (notificationCreateError) {
+              context.chrome.runtime.lastError = { message: notificationCreateError };
+              callback();
+              context.chrome.runtime.lastError = null;
+            } else {
+              callback();
+            }
+          }
         },
-        clear(id) {
+        clear(id, callback) {
           env.clearedNotifications.push(id);
+          if (typeof callback === 'function') {
+            if (notificationClearError) {
+              context.chrome.runtime.lastError = { message: notificationClearError };
+              callback(false);
+              context.chrome.runtime.lastError = null;
+            } else {
+              callback(true);
+            }
+          }
         }
       },
       storage: {
@@ -197,6 +223,36 @@ async function main() {
     assert.strictEqual(harness.env.notifications[0].options.title, 'Could not save page');
     assert.strictEqual(harness.env.notifications[0].options.message, 'Storage write failed');
     assert.strictEqual(harness.env.errors.length, 1);
+  }
+
+  {
+    const harness = createHarness({
+      tab: { title: 'Fresh Article', url: 'https://fresh.example/post' },
+      storage: { [storageKey]: [] },
+      notificationCreateError: 'Notifications are disabled'
+    });
+
+    await harness.quickSave();
+
+    assert.strictEqual(harness.env.storage[storageKey].length, 1);
+    assert.strictEqual(harness.env.errors.length, 1);
+    assert.strictEqual(harness.env.errors[0][0], 'Failed to create notification:');
+    assert.strictEqual(harness.env.errors[0][1], 'Notifications are disabled');
+  }
+
+  {
+    const harness = createHarness({
+      tab: { title: 'Fresh Article', url: 'https://fresh.example/post' },
+      storage: { [storageKey]: [] },
+      notificationClearError: 'Could not clear notification'
+    });
+
+    await harness.quickSave();
+    harness.env.timers[0]();
+
+    assert.strictEqual(harness.env.errors.length, 1);
+    assert.strictEqual(harness.env.errors[0][0], 'Failed to clear notification:');
+    assert.strictEqual(harness.env.errors[0][1], 'Could not clear notification');
   }
 }
 

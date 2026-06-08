@@ -468,6 +468,15 @@ assert.ok(backgroundJs.includes('ReadLaterCore.upsertEntry'), 'background shortc
 assert.ok(!backgroundJs.includes('e.url === entry.url'), 'background shortcut must not compare raw URLs');
 assert.ok(!backgroundJs.includes('chrome.notifications.getAll'), 'notification cleanup should clear only the notification it created');
 assert.ok(
+  backgroundJs.includes('chrome.notifications.create') &&
+    backgroundJs.includes('chrome.notifications.clear') &&
+    backgroundJs.includes('chrome.runtime') &&
+    backgroundJs.includes('lastError') &&
+    backgroundJs.includes('Failed to create notification') &&
+    backgroundJs.includes('Failed to clear notification'),
+  'background notification create/clear callbacks should surface chrome.runtime.lastError'
+);
+assert.ok(
   popupJs.includes('ReadLaterCore.normalizeEntries(result[storageKey])'),
   'popup startup should rebuild stored entries through the shared recovery helper before render'
 );
