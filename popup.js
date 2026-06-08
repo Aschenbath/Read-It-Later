@@ -20,6 +20,7 @@ const state = {
   selectedIds: new Set(),
   pendingGroupSelectedIds: [],
   showCreateGroup: false,
+  focusedGroupDomain: '',
   viewMode: 'flat' // 'grouped' or 'flat'
 };
 
@@ -156,6 +157,7 @@ function enterSelectionMode() {
   state.selectedIds.clear();
   state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
+  state.focusedGroupDomain = '';
   document.body.classList.add('selection-mode');
 }
 
@@ -164,12 +166,14 @@ function exitSelectionMode() {
   state.selectedIds.clear();
   state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
+  state.focusedGroupDomain = '';
   document.body.classList.remove('selection-mode');
   render();
 }
 
 function toggleViewMode() {
   state.viewMode = state.viewMode === 'grouped' ? 'flat' : 'grouped';
+  state.focusedGroupDomain = '';
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
   persistViewMode().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not save view mode');
@@ -248,6 +252,7 @@ async function commitSelectionToGroup(targetDomain, options = {}) {
   state.selectionMode = false;
   state.selectedIds.clear();
   state.pendingGroupSelectedIds = [];
+  state.focusedGroupDomain = '';
   state.emptyGroupDeleteArmed.delete(groupName);
   document.body.classList.remove('selection-mode');
 
@@ -298,6 +303,9 @@ async function removeCustomGroup(groupName) {
   state.customGroups = state.customGroups.filter(group => group !== targetDomain);
   state.expandedDomains.delete(targetDomain);
   state.emptyGroupDeleteArmed.delete(targetDomain);
+  if (state.focusedGroupDomain === targetDomain) {
+    state.focusedGroupDomain = '';
+  }
   await Promise.all([
     persistCustomGroups(),
     persistExpandedDomains()
@@ -345,6 +353,12 @@ function openEntry(entry) {
   if (entry && entry.url) {
     chrome.tabs.create({ url: entry.url });
   }
+}
+
+function exitFocusedGroup() {
+  if (!state.focusedGroupDomain) return;
+  state.focusedGroupDomain = '';
+  render();
 }
 
 async function removeEntry(entry) {
@@ -794,6 +808,12 @@ function renderDomainGroup(group) {
       return;
     }
     if (group.count === 0) return;
+    if (!state.selectionMode) {
+      state.focusedGroupDomain = group.domain;
+      state.emptyGroupDeleteArmed.clear();
+      render();
+      return;
+    }
     toggleExpansion();
   });
 
@@ -803,6 +823,12 @@ function renderDomainGroup(group) {
     }
     if (group.count === 0) return;
     e.preventDefault();
+    if (!state.selectionMode) {
+      state.focusedGroupDomain = group.domain;
+      state.emptyGroupDeleteArmed.clear();
+      render();
+      return;
+    }
     toggleExpansion();
   });
 
@@ -840,6 +866,54 @@ function renderDomainGroup(group) {
   });
 
   return container;
+}
+
+function renderFocusedGroupView(group) {
+  const view = document.createElement('div');
+  view.className = 'focused-group-view';
+
+  const bar = document.createElement('div');
+  bar.className = 'focused-group-bar';
+
+  const back = document.createElement('button');
+  back.className = 'focused-group-back';
+  back.type = 'button';
+  back.title = 'Back to groups';
+  back.setAttribute('aria-label', 'Back to groups');
+  const backIcon = document.createElement('span');
+  backIcon.className = 'focused-group-back-icon';
+  backIcon.setAttribute('aria-hidden', 'true');
+  back.appendChild(backIcon);
+  back.addEventListener('click', exitFocusedGroup);
+
+  const info = document.createElement('span');
+  info.className = 'focused-group-info';
+
+  const title = document.createElement('span');
+  title.className = 'focused-group-title';
+  title.textContent = group.domain;
+
+  const count = document.createElement('span');
+  count.className = 'focused-group-count';
+  count.textContent = `${group.count} pages`;
+
+  info.appendChild(title);
+  info.appendChild(count);
+  bar.appendChild(back);
+  bar.appendChild(makeIcon(group.entries[0]));
+  bar.appendChild(info);
+
+  const entries = document.createElement('div');
+  entries.className = 'focused-group-entries';
+  group.entries.forEach((entry) => {
+    const card = renderEntry(entry);
+    card.style.animation = 'none';
+    entries.appendChild(card);
+  });
+
+  view.appendChild(bar);
+  view.appendChild(entries);
+  return view;
 }
 
 function renderEmptyState(visible, renderedCount = visible.length) {
@@ -903,13 +977,23 @@ function render() {
     // Grouped view: group by domain
     const customGroupsForRender = state.query && !state.selectionMode ? [] : state.customGroups;
     const groups = ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender);
-    elements = groups.map(group => {
-      if (group.type === 'single') {
-        return renderEntry(group.entry);
-      } else {
-        return renderDomainGroup(group);
+    const focusedGroup = !state.selectionMode && state.focusedGroupDomain
+      ? groups.find(group => group.type === 'group' && group.domain === state.focusedGroupDomain && group.count > 0)
+      : null;
+    if (focusedGroup) {
+      elements = [renderFocusedGroupView(focusedGroup)];
+    } else {
+      if (!state.selectionMode) {
+        state.focusedGroupDomain = '';
       }
-    });
+      elements = groups.map(group => {
+        if (group.type === 'single') {
+          return renderEntry(group.entry);
+        } else {
+          return renderDomainGroup(group);
+        }
+      });
+    }
   }
 
   // Insert "Create new group" item at the top in selection mode
@@ -1061,6 +1145,11 @@ function bind() {
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+      if (state.focusedGroupDomain) {
+        event.preventDefault();
+        exitFocusedGroup();
+        return;
+      }
       if (state.selectionMode) {
         event.preventDefault();
         exitSelectionMode();

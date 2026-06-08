@@ -231,6 +231,7 @@ function instrumentPopup(source) {
       '  removeCustomGroup,',
       '  commitSelectionToGroup,',
       '  renderDomainGroup,',
+      '  renderFocusedGroupView,',
       '  render',
       '};',
       "document.addEventListener('DOMContentLoaded', init);",
@@ -373,6 +374,7 @@ async function main() {
     };
     const node = api.renderDomainGroup(group);
     const header = node.querySelector('.domain-group-header');
+    api.state.selectionMode = true;
 
     header.click();
 
@@ -383,6 +385,42 @@ async function main() {
 
     assert.strictEqual(api.state.expandedDomains.has('Docs'), false);
     assert.strictEqual(header.getAttribute('aria-expanded'), 'false');
+  }
+
+  {
+    const { api } = createHarness();
+    const docsEntry = ReadLaterCore.buildEntryFromTab({
+      title: 'Docs page',
+      url: 'https://docs.example/read'
+    }, 1000);
+    const docsSecondEntry = ReadLaterCore.buildEntryFromTab({
+      title: 'Docs second page',
+      url: 'https://docs.example/second'
+    }, 950);
+    const blogEntry = ReadLaterCore.buildEntryFromTab({
+      title: 'Blog page',
+      url: 'https://blog.example/read'
+    }, 900);
+    const blogSecondEntry = ReadLaterCore.buildEntryFromTab({
+      title: 'Blog second page',
+      url: 'https://blog.example/second'
+    }, 850);
+    api.state.entries = [docsEntry, docsSecondEntry, blogEntry, blogSecondEntry];
+    api.state.viewMode = 'grouped';
+    api.render();
+
+    const docsHeader = api.els.entriesList.querySelector('.domain-group-header');
+    docsHeader.click();
+
+    assert.strictEqual(api.state.focusedGroupDomain, 'docs.example');
+    assert.strictEqual(api.els.entriesList.children.length, 1);
+    assert.strictEqual(api.els.entriesList.children[0].className, 'focused-group-view');
+    assert.strictEqual(api.els.entriesList.querySelectorAll('.entry-card').length, 2);
+
+    api.els.entriesList.querySelector('.focused-group-back').click();
+
+    assert.strictEqual(api.state.focusedGroupDomain, '');
+    assert.strictEqual(api.els.entriesList.querySelectorAll('.domain-group').length, 2);
   }
 
   {

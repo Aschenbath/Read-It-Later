@@ -175,6 +175,9 @@ assert.ok(popupJs.includes('readLaterViewMode'), 'grouped/flat view mode should 
 assert.ok(popupJs.includes('readLaterCustomGroups'), 'user-created groups should be stored independently from entry domains');
 assert.ok(popupJs.includes('state.expandedDomains = new Set'), 'expanded group state should be restored when the popup opens');
 assert.ok(popupJs.includes('state.customGroups ='), 'user-created groups should be restored when the popup opens');
+assert.ok(popupJs.includes('focusedGroupDomain'), 'normal grouped view should support a focused group drill-down state');
+assert.ok(popupJs.includes('function renderFocusedGroupView'), 'focused grouped view should render through a dedicated surface');
+assert.ok(popupJs.includes('function exitFocusedGroup'), 'focused grouped view should have an explicit return path');
 assert.ok(popupJs.includes('function persistExpandedDomains'), 'expanded/collapsed group state should be persisted after toggles');
 assert.ok(popupJs.includes('function persistViewMode'), 'grouped/flat view choice should be persisted after toggles');
 assert.ok(popupJs.includes('function persistCustomGroups'), 'user-created groups should be persisted after creation');
@@ -194,6 +197,10 @@ assert.ok(
 assert.ok(
   popupJs.includes('const isExpanded = state.expandedDomains.has(group.domain);'),
   'selection/classification mode should keep classified groups compact until the user opens them'
+);
+assert.ok(
+  popupJs.includes('const focusedGroup = !state.selectionMode && state.focusedGroupDomain'),
+  'normal grouped view should render one focused group instead of expanding content inside the list'
 );
 assert.ok(
   !popupJs.includes('const hasSelectedEntry = state.selectionMode'),
@@ -217,7 +224,7 @@ assert.ok(
 );
 assert.ok(
   popupJs.includes("header.addEventListener('click'"),
-  'non-empty group headers should toggle when clicked anywhere on the header'
+  'group headers should handle click interaction'
 );
 assert.ok(
   popupJs.includes('if (group.count === 0) return;'),
@@ -267,6 +274,8 @@ assert.ok(
 assert.ok(!css.includes('.undo-button'), 'stale undo styles should be removed because the undo affordance no longer exists');
 assert.ok(css.includes('.delete-selected-icon'), 'bulk delete button should use a CSS-drawn icon');
 assert.ok(css.includes('.domain-group-header.is-delete-armed'), 'empty group delete arm state should have visible feedback');
+assert.ok(css.includes('.focused-group-view'), 'focused group view should have its own visual surface');
+assert.ok(css.includes('.focused-group-back'), 'focused group view should expose a compact back control');
 assert.ok(!css.includes('stackExpand'), 'group expansion should not stagger/scale every child card');
 assert.ok(
   /\.domain-group-entries \.entry-card\s*\{[\s\S]*?animation:\s*none;/.test(css),
