@@ -232,30 +232,21 @@ h1 {
   position: relative;
 }
 
-/* Grouped view icon: folder/stacked appearance */
+/* Grouped view icon: small box/container representing groups */
 .view-mode-icon::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 4px;
-  width: 100%;
+  left: 3px;
+  top: 3px;
+  width: 10px;
   height: 10px;
   border: 2px solid currentColor;
-  border-radius: 2px;
+  border-radius: 3px;
   background: transparent;
 }
 
 .view-mode-icon::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 8px;
-  height: 3px;
-  border: 2px solid currentColor;
-  border-bottom: none;
-  border-radius: 2px 2px 0 0;
-  background: transparent;
+  display: none;
 }
 
 /* Flat view icon: simple list lines */
