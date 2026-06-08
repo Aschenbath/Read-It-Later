@@ -791,9 +791,8 @@ function renderDomainGroup(group) {
 
   const contentWrap = document.createElement('div');
   contentWrap.className = 'domain-group-content';
-  if (isExpanded) {
-    contentWrap.classList.add('is-expanded');
-  }
+  // Don't add is-expanded immediately to allow transition on first render
+  const shouldExpand = isExpanded;
 
   const toggleExpansion = () => {
     if (group.count === 0) return;
@@ -815,6 +814,8 @@ function renderDomainGroup(group) {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
       header.setAttribute('aria-expanded', 'true');
+      // Force reflow before adding class to trigger transition
+      contentWrap.offsetHeight;
       contentWrap.classList.add('is-expanded');
       animateListReflow(previousPositions, { exclude: container });
     }
@@ -847,6 +848,15 @@ function renderDomainGroup(group) {
   contentWrap.appendChild(content);
   container.appendChild(header);
   container.appendChild(contentWrap);
+
+  // Trigger expand animation after DOM insertion if initially expanded
+  if (shouldExpand) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        contentWrap.classList.add('is-expanded');
+      });
+    });
+  }
 
   // Drop zone for dragging entries to this group
   header.addEventListener('dragover', (e) => {
