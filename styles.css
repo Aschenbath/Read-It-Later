@@ -1341,16 +1341,10 @@ h1 {
 .domain-group-entries {
   padding: 10px 0 0;
   position: relative;
-  opacity: 0;
-  transform: translateY(-20px);
-  transition:
-    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s,
-    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries {
-  opacity: 1;
-  transform: translateY(0);
+  /* No need for extra transitions - cards handle their own animation */
 }
 
 .domain-group-entries .entry-card {
