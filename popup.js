@@ -94,6 +94,7 @@ function enterSelectionMode() {
 }
 
 function exitSelectionMode() {
+  console.log('[exitSelectionMode] CALLED', new Error().stack);
   state.selectionMode = false;
   state.selectedIds.clear();
   state.showCreateGroup = false;
@@ -117,6 +118,12 @@ function toggleSelection(entryId) {
 }
 
 async function mergeSelectionToGroup(targetDomain) {
+  console.log('[mergeSelectionToGroup] START', {
+    targetDomain,
+    selectedCount: state.selectedIds.size,
+    selectionMode: state.selectionMode
+  });
+
   if (state.selectedIds.size === 0) return;
 
   // Update domain for selected entries
@@ -134,8 +141,19 @@ async function mergeSelectionToGroup(targetDomain) {
   state.selectedIds.clear();
   state.showCreateGroup = false;
 
+  console.log('[mergeSelectionToGroup] BEFORE persist', {
+    selectionMode: state.selectionMode,
+    selectedCount: state.selectedIds.size,
+    showCreateGroup: state.showCreateGroup
+  });
+
   // Persist will call render() with the updated state
   await persist(updatedEntries);
+
+  console.log('[mergeSelectionToGroup] AFTER persist', {
+    selectionMode: state.selectionMode,
+    selectedCount: state.selectedIds.size
+  });
 }
 
 async function createGroupFromSelection() {
