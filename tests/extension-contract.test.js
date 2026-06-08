@@ -67,6 +67,8 @@ assert.ok(!popupJs.includes('innerHTML = entry.domain'));
 assert.ok(popupJs.includes('function renderEmptyState'), 'popup should render an empty-state that changes for empty list vs no matches');
 assert.ok(popupJs.includes("els.emptyActionBtn.dataset.action = hasNoMatches ? 'clear' : 'add'"), 'empty-state action should clear only for no-match searches');
 assert.ok(popupJs.includes("els.clearSearchBtn.addEventListener('click'"), 'search should have a one-click clear control');
+const enterSelectionModeBlock = popupJs.match(/function enterSelectionMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(!enterSelectionModeBlock.includes('render();'), 'long-press selection should not render an empty selection state before selecting the pressed entry');
 assert.ok(
   popupJs.includes('if (state.selectionMode && state.selectedIds.size === 0)') &&
   popupJs.includes('exitSelectionMode();'),
@@ -89,6 +91,11 @@ assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
+assert.ok(popupJs.includes('readLaterExpandedDomains'), 'expanded group state should be stored under a stable key');
+assert.ok(popupJs.includes('readLaterViewMode'), 'grouped/flat view mode should be stored under a stable key');
+assert.ok(popupJs.includes('state.expandedDomains = new Set'), 'expanded group state should be restored when the popup opens');
+assert.ok(popupJs.includes('function persistExpandedDomains'), 'expanded/collapsed group state should be persisted after toggles');
+assert.ok(popupJs.includes('function persistViewMode'), 'grouped/flat view choice should be persisted after toggles');
 assert.ok(!popupJs.includes('markAsRead'), 'opening an entry should not maintain read/unread state');
 assert.ok(!popupJs.includes('toggleReadStatus'), 'popup should not expose read/unread toggling');
 assert.ok(!popupJs.includes('is-read'), 'entry rendering should not apply read/unread classes');

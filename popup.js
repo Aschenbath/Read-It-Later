@@ -1,6 +1,8 @@
 (function () {
 const ReadLaterCore = globalThis.ReadLaterCore;
 const storageKey = ReadLaterCore.STORAGE_KEY;
+const expandedDomainsStorageKey = 'readLaterExpandedDomains';
+const viewModeStorageKey = 'readLaterViewMode';
 
 const state = {
   entries: [],
@@ -62,13 +64,23 @@ function currentTab() {
 }
 
 async function loadEntries() {
-  const result = await chromeGet({ [storageKey]: [], openedDomainTabs: {} });
+  const result = await chromeGet({
+    [storageKey]: [],
+    openedDomainTabs: {},
+    [expandedDomainsStorageKey]: [],
+    [viewModeStorageKey]: 'flat'
+  });
   const entries = Array.isArray(result[storageKey]) ? result[storageKey] : [];
   state.entries = ReadLaterCore.sortEntriesForDisplay(entries.map(entry => ReadLaterCore.normalizeEntry(entry)));
 
   // Restore opened domain tabs state
   const savedOpenedTabs = result.openedDomainTabs || {};
   state.openedDomainTabs = new Map(Object.entries(savedOpenedTabs));
+  const savedExpandedDomains = Array.isArray(result[expandedDomainsStorageKey])
+    ? result[expandedDomainsStorageKey]
+    : [];
+  state.expandedDomains = new Set(savedExpandedDomains.filter(domain => typeof domain === 'string' && domain));
+  state.viewMode = result[viewModeStorageKey] === 'grouped' ? 'grouped' : 'flat';
 
   await refreshCurrentTabState({ render: false, force: true });
   render();
@@ -85,12 +97,19 @@ async function persistOpenedTabs() {
   await chromeSet({ openedDomainTabs: openedTabsObj });
 }
 
+async function persistExpandedDomains() {
+  await chromeSet({ [expandedDomainsStorageKey]: Array.from(state.expandedDomains) });
+}
+
+async function persistViewMode() {
+  await chromeSet({ [viewModeStorageKey]: state.viewMode });
+}
+
 function enterSelectionMode() {
   state.selectionMode = true;
   state.selectedIds.clear();
   state.showCreateGroup = false;
   document.body.classList.add('selection-mode');
-  render();
 }
 
 function exitSelectionMode() {
@@ -105,6 +124,9 @@ function exitSelectionMode() {
 function toggleViewMode() {
   state.viewMode = state.viewMode === 'grouped' ? 'flat' : 'grouped';
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
+  persistViewMode().catch((error) => {
+    setStatus(error && error.message ? error.message : 'Could not save view mode');
+  });
   render();
 }
 
@@ -171,6 +193,9 @@ async function mergeSelectionToGroup(targetDomain) {
 
   // Expand the newly created/updated group BEFORE persisting
   state.expandedDomains.add(targetDomain);
+  persistExpandedDomains().catch((error) => {
+    setStatus(error && error.message ? error.message : 'Could not save group state');
+  });
 
   // Clear selection and hide create group input BEFORE persist
   state.selectedIds.clear();
@@ -611,6 +636,9 @@ function renderDomainGroup(group) {
     const wasExpanded = state.expandedDomains.has(group.domain);
     if (wasExpanded) {
       state.expandedDomains.delete(group.domain);
+      persistExpandedDomains().catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not save group state');
+      });
       header.setAttribute('aria-expanded', 'false');
       contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px';
       requestAnimationFrame(() => {
@@ -622,6 +650,9 @@ function renderDomainGroup(group) {
       }, 320);
     } else {
       state.expandedDomains.add(group.domain);
+      persistExpandedDomains().catch((error) => {
+        setStatus(error && error.message ? error.message : 'Could not save group state');
+      });
       header.setAttribute('aria-expanded', 'true');
       contentWrap.style.display = 'block';
       contentWrap.style.maxHeight = '0';
