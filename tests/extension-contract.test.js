@@ -133,8 +133,8 @@ assert.ok(
   'empty user-created groups should be removable from the grouped workspace'
 );
 assert.ok(
-  popupJs.includes('state.selectionMode && group.count === 0 && wasExpanded'),
-  'clicking an already-expanded empty group in selection mode should delete the empty group'
+  popupJs.includes('group.count === 0 && wasExpanded'),
+  'clicking an already-expanded empty group should delete it (works in both normal and selection mode)'
 );
 assert.ok(
   /if\s*\(\s*state\.selectionMode\s*\)\s*{\s*state\.expandedDomains\.delete\(targetDomain\);/.test(popupJs),

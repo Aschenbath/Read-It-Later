@@ -680,7 +680,8 @@ function renderDomainGroup(group) {
     }
 
     const wasExpanded = state.expandedDomains.has(group.domain);
-    if (state.selectionMode && group.count === 0 && wasExpanded) {
+    // Empty custom group: first click expands, second click (when expanded) deletes
+    if (group.count === 0 && wasExpanded) {
       removeCustomGroup(group.domain).catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not remove group');
       });
