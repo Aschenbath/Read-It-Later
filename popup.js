@@ -266,8 +266,8 @@ async function persistExpandedDomains() {
   await setPopupStorage({ [expandedDomainsStorageKey]: Array.from(state.expandedDomains) });
 }
 
-async function persistViewMode() {
-  await setPopupStorage({ [viewModeStorageKey]: state.viewMode });
+async function persistViewMode(viewMode = state.viewMode) {
+  await setPopupStorage({ [viewModeStorageKey]: viewMode });
 }
 
 async function persistCustomGroups() {
@@ -300,9 +300,12 @@ async function toggleViewMode() {
     els.viewModeBtn.disabled = true;
   }
 
-  const isCurrentlyGrouped = state.viewMode === 'grouped';
+  const previousMode = state.viewMode;
+  const isCurrentlyGrouped = previousMode === 'grouped';
+  const nextMode = isCurrentlyGrouped ? 'flat' : 'grouped';
   const exitClass = isCurrentlyGrouped ? 'mode-exit-grouped' : 'mode-exit-flat';
   const enterClass = isCurrentlyGrouped ? 'mode-enter-flat' : 'mode-enter-grouped';
+  const rollbackEnterClass = isCurrentlyGrouped ? 'mode-enter-grouped' : 'mode-enter-flat';
 
   document.body.classList.add(exitClass);
 
@@ -320,14 +323,26 @@ async function toggleViewMode() {
 
   await new Promise(resolve => setTimeout(resolve, 600));
 
-  state.viewMode = isCurrentlyGrouped ? 'flat' : 'grouped';
   document.body.classList.remove(exitClass);
+
+  try {
+    await persistViewMode(nextMode);
+  } catch (error) {
+    state.viewMode = previousMode;
+    document.body.classList.toggle('flat-view', state.viewMode === 'flat');
+    document.body.classList.add(rollbackEnterClass);
+    render();
+    setStatus(error && error.message ? error.message : 'Could not save view mode');
+    await new Promise(resolve => setTimeout(resolve, 700));
+    document.body.classList.remove(rollbackEnterClass);
+    state.isTransitioningMode = false;
+    renderViewModeButtonState();
+    return;
+  }
+
+  state.viewMode = nextMode;
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
   document.body.classList.add(enterClass);
-
-  persistViewMode().catch((error) => {
-    setStatus(error && error.message ? error.message : 'Could not save view mode');
-  });
 
   render();
 

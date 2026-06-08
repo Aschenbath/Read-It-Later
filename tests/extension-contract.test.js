@@ -407,6 +407,18 @@ assert.ok(toggleViewModeBlock.includes('mode-enter-flat') && toggleViewModeBlock
 assert.ok(toggleViewModeBlock.includes("card.classList.add('is-exiting')"), 'view-mode switching should keep the original per-card exit animation hook');
 assert.ok(toggleViewModeBlock.includes("group.classList.add('is-transitioning')"), 'view-mode switching should keep the original per-group exit animation hook');
 assert.ok(toggleViewModeBlock.includes('setTimeout(resolve, 600)') && toggleViewModeBlock.includes('setTimeout(resolve, 700)'), 'view-mode switching should keep the original two-phase mode timing');
+assert.ok(
+  toggleViewModeBlock.includes('const previousMode = state.viewMode;') &&
+    toggleViewModeBlock.includes('const nextMode =') &&
+    toggleViewModeBlock.includes('await persistViewMode(nextMode);') &&
+    toggleViewModeBlock.includes('state.viewMode = previousMode;') &&
+    toggleViewModeBlock.includes('state.isTransitioningMode = false;'),
+  'view-mode switching should treat storage persistence as the commit boundary and roll back cleanly on failure'
+);
+assert.ok(
+  !toggleViewModeBlock.includes('persistViewMode().catch'),
+  'view-mode persistence should not be fire-and-forget during mode transitions'
+);
 assert.ok(css.includes('body.mode-exit-grouped') && css.includes('body.mode-exit-flat'), 'CSS should include full-list view-mode exit animations');
 assert.ok(css.includes('body.mode-enter-grouped') && css.includes('body.mode-enter-flat'), 'CSS should include full-list view-mode enter animations');
 assert.ok(

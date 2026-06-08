@@ -428,6 +428,13 @@ async function dispatchAndWait(element, event) {
   await Promise.all(results.filter(result => result && typeof result.then === 'function'));
 }
 
+async function flushPromises(count = 6) {
+  for (let i = 0; i < count; i += 1) {
+    await Promise.resolve();
+  }
+  await new Promise(resolve => setImmediate(resolve));
+}
+
 async function main() {
   {
     const { api, storage } = createHarness();
@@ -1237,6 +1244,45 @@ async function main() {
       api.__renderBodyClasses.some(className => /\bmode-enter-grouped\b/.test(className)),
       'mode-switch render should happen while the mode-enter class is already present'
     );
+  }
+
+  {
+    const { api, document, storage, timers } = createHarness({
+      setError: 'Storage write failed',
+      deferAnimationTimers: true
+    });
+    const now = Date.now();
+    api.state.viewMode = 'flat';
+    api.state.entries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs A', url: 'https://docs.example/a' }, now),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs B', url: 'https://docs.example/b' }, now)
+    ].map(entry => ({ ...entry, domain: 'Docs' }));
+    api.render();
+
+    const transition = api.toggleViewMode();
+
+    assert.strictEqual(api.state.isTransitioningMode, true, 'view-mode transition should start');
+    assert.strictEqual(api.state.viewMode, 'flat', 'view mode should not change before the exit phase ends');
+    assert.strictEqual(timers[0].delay, 600, 'mode switch should still use the original exit timing');
+
+    timers.shift().callback();
+    await flushPromises();
+
+    assert.strictEqual(
+      api.els.statusText.textContent,
+      'Storage write failed',
+      'failed view-mode persistence should surface the storage error'
+    );
+    assert.strictEqual(api.state.viewMode, 'flat', 'failed view-mode persistence should roll back to the previous mode');
+    assert.strictEqual(document.body.classList.contains('flat-view'), true, 'failed view-mode persistence should restore the previous body class');
+    assert.strictEqual(storage.readLaterViewMode, undefined, 'failed view-mode persistence should not write storage');
+
+    assert.strictEqual(timers[0].delay, 700, 'mode switch should still use the original enter timing');
+    timers.shift().callback();
+    await transition;
+
+    assert.strictEqual(api.state.isTransitioningMode, false, 'failed view-mode transition should release its guard');
+    assert.strictEqual(api.els.viewModeBtn.disabled, false, 'failed view-mode transition should re-enable the toggle');
   }
 }
 
