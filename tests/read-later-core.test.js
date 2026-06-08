@@ -121,6 +121,38 @@ assert.deepStrictEqual(recoveredEntries.map(entry => entry.url), [
 ]);
 assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Safe page').favIconUrl, '');
 
+const dedupedRecoveredEntries = normalizeEntries([
+  {
+    title: 'Older duplicate',
+    url: 'https://example.com/duplicate#old',
+    domain: 'Research',
+    createdAt: now - 5000,
+    updatedAt: now - 4000
+  },
+  {
+    title: 'Newest duplicate',
+    url: 'https://example.com/duplicate#new',
+    favIconUrl: 'https://example.com/new.ico',
+    createdAt: now - 3000,
+    updatedAt: now - 100
+  },
+  {
+    title: 'Unrelated',
+    url: 'https://other.example/read',
+    updatedAt: now - 200
+  }
+], now);
+assert.deepStrictEqual(dedupedRecoveredEntries.map(entry => entry.url), [
+  'https://example.com/duplicate',
+  'https://other.example/read'
+]);
+const recoveredDuplicate = dedupedRecoveredEntries.find(entry => entry.url === 'https://example.com/duplicate');
+assert.strictEqual(recoveredDuplicate.title, 'Newest duplicate');
+assert.strictEqual(recoveredDuplicate.domain, 'Research');
+assert.strictEqual(recoveredDuplicate.createdAt, now - 5000);
+assert.strictEqual(recoveredDuplicate.updatedAt, now - 100);
+assert.strictEqual(recoveredDuplicate.favIconUrl, 'https://example.com/new.ico');
+
 assert.strictEqual(normalizeEntry({
   title: 'Manual group entry',
   url: 'https://linux.do/t/topic/123',

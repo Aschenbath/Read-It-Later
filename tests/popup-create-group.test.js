@@ -597,6 +597,41 @@ async function main() {
   }
 
   {
+    const { api, storage } = createHarness();
+    storage[ReadLaterCore.STORAGE_KEY] = [
+      {
+        title: 'Older duplicate',
+        url: 'https://docs.example/duplicate#old',
+        domain: 'Docs Queue',
+        createdAt: 1000,
+        updatedAt: 2000
+      },
+      {
+        title: 'Newest duplicate',
+        url: 'https://docs.example/duplicate#new',
+        createdAt: 3000,
+        updatedAt: 5000
+      },
+      {
+        title: 'Other page',
+        url: 'https://other.example/read',
+        updatedAt: 4000
+      }
+    ];
+
+    await api.loadEntries();
+
+    assert.deepStrictEqual(api.state.entries.map(entry => entry.url), [
+      'https://docs.example/duplicate',
+      'https://other.example/read'
+    ]);
+    assert.strictEqual(api.state.entries[0].title, 'Newest duplicate');
+    assert.strictEqual(api.state.entries[0].domain, 'Docs Queue');
+    assert.strictEqual(api.state.entries[0].createdAt, 1000);
+    assert.strictEqual(api.state.entries[0].updatedAt, 5000);
+  }
+
+  {
     const { api } = createHarness();
     const tab = {
       title: 'Saved current page',

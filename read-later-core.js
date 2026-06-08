@@ -113,9 +113,37 @@ function buildEntryFromTab(tab, now = Date.now()) {
   }, now);
 }
 
+function isCustomDomainEntry(entry) {
+  if (!entry || !entry.domain || !entry.url) return false;
+  return entry.domain !== domainFromUrl(entry.url);
+}
+
+function isNewerEntry(candidate, current) {
+  const candidateUpdated = Number(candidate && candidate.updatedAt) || 0;
+  const currentUpdated = Number(current && current.updatedAt) || 0;
+  if (candidateUpdated !== currentUpdated) {
+    return candidateUpdated > currentUpdated;
+  }
+  return (Number(candidate && candidate.createdAt) || 0) >= (Number(current && current.createdAt) || 0);
+}
+
+function mergeRecoveredEntry(current, candidate) {
+  const winner = isNewerEntry(candidate, current) ? candidate : current;
+  const other = winner === candidate ? current : candidate;
+  const winnerCustomDomain = isCustomDomainEntry(winner) ? winner.domain : '';
+  const otherCustomDomain = isCustomDomainEntry(other) ? other.domain : '';
+  return {
+    ...winner,
+    createdAt: Math.min(Number(current.createdAt) || 0, Number(candidate.createdAt) || 0),
+    updatedAt: Math.max(Number(current.updatedAt) || 0, Number(candidate.updatedAt) || 0),
+    domain: winnerCustomDomain || otherCustomDomain || winner.domain,
+    favIconUrl: winner.favIconUrl || other.favIconUrl || ''
+  };
+}
+
 function normalizeEntries(entries, now = Date.now()) {
   const list = Array.isArray(entries) ? entries : [];
-  const normalized = [];
+  const byUrl = new Map();
   for (const item of list) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       continue;
@@ -124,9 +152,11 @@ function normalizeEntries(entries, now = Date.now()) {
     if (!entry.id || !isSavableUrl(entry.url)) {
       continue;
     }
-    normalized.push(entry);
+    const key = normalizeUrl(entry.url);
+    const current = byUrl.get(key);
+    byUrl.set(key, current ? mergeRecoveredEntry(current, entry) : entry);
   }
-  return sortEntriesForDisplay(normalized);
+  return sortEntriesForDisplay(Array.from(byUrl.values()));
 }
 
 function sortEntriesForDisplay(entries) {
@@ -164,7 +194,7 @@ function findEntryByUrl(entries, url) {
 }
 
 function upsertEntry(entries, entry) {
-  const list = Array.isArray(entries) ? entries.map(item => normalizeEntry(item)) : [];
+  const list = normalizeEntries(entries);
   const nextEntry = normalizeEntry(entry);
   const key = normalizeUrl(nextEntry.url);
   const index = list.findIndex(item => normalizeUrl(item.url) === key);
