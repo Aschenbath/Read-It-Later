@@ -141,6 +141,10 @@ async function mergeSelectionToGroup(targetDomain) {
   state.selectedIds.clear();
   state.showCreateGroup = false;
 
+  // Exit selection mode after creating group
+  state.selectionMode = false;
+  document.body.classList.remove('selection-mode');
+
   console.log('[mergeSelectionToGroup] BEFORE persist', {
     selectionMode: state.selectionMode,
     selectedCount: state.selectedIds.size,
