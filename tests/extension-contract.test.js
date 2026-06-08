@@ -361,6 +361,18 @@ assert.ok(
   'mode switching should target the same individual cards as the established choreography'
 );
 assert.ok(
+  css.includes('body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card'),
+  'mode-enter grouped cards should override already-expanded group-card transition state'
+);
+assert.ok(
+  /body\.mode-enter-grouped \.domain-group-content\.is-expanded \.domain-group-entries \.entry-card\s*\{[\s\S]*?transition:\s*none;[\s\S]*?animation-fill-mode:\s*both;/.test(css),
+  'mode-enter grouped cards should use the mode animation fill, not the local expand transition'
+);
+assert.ok(
+  /body\.mode-enter-flat \.entry-card\s*\{[\s\S]*?animation:\s*cardEnterFlat[\s\S]*?\sboth;/.test(css),
+  'mode-enter flat cards should hold their first animation frame during stagger delays'
+);
+assert.ok(
   css.includes('.domain-group-entries .entry-card:nth-child(even)') &&
     css.includes('translateX(35px) scale(0.9)') &&
     css.includes('.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(even)'),

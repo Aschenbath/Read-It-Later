@@ -286,13 +286,13 @@ async function toggleViewMode() {
   state.viewMode = isCurrentlyGrouped ? 'flat' : 'grouped';
   document.body.classList.remove(exitClass);
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
+  document.body.classList.add(enterClass);
 
   persistViewMode().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not save view mode');
   });
 
   render();
-  document.body.classList.add(enterClass);
 
   await new Promise(resolve => setTimeout(resolve, 700));
 
@@ -584,7 +584,7 @@ function renderEntry(entry) {
 
   // Add entrance animation for newly added entries (within last 2 seconds)
   const entryAge = Date.now() - (entry.updatedAt || entry.createdAt || 0);
-  if (entryAge < 2000) {
+  if (!state.isTransitioningMode && entryAge < 2000) {
     item.style.animation = 'entryIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)';
   }
 

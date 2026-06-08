@@ -1,6 +1,18 @@
 (function () {
 const STORAGE_KEY = 'readLaterItems';
-const SAVABLE_PROTOCOLS = new Set(['http:', 'https:', 'chrome:', 'edge:']);
+const SAVABLE_PROTOCOLS = new Set([
+  'http:',
+  'https:',
+  'arc:',
+  'brave:',
+  'chrome:',
+  'chrome-untrusted:',
+  'devtools:',
+  'edge:',
+  'opera:',
+  'vivaldi:'
+]);
+const BLOCKED_ABOUT_PATHS = new Set(['blank', 'srcdoc']);
 const SAFE_DATA_IMAGE_TYPES = new Set([
   'avif',
   'bmp',
@@ -62,6 +74,10 @@ function isSavableUrl(value) {
   if (!url) return false;
   try {
     const parsed = new URL(url);
+    if (parsed.protocol === 'about:') {
+      const path = cleanText(parsed.pathname).toLowerCase();
+      return !!path && !BLOCKED_ABOUT_PATHS.has(path);
+    }
     return SAVABLE_PROTOCOLS.has(parsed.protocol);
   } catch {
     return false;

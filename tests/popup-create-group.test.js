@@ -222,6 +222,9 @@ class TestDocument {
 
 function instrumentPopup(source) {
   return source.replace(
+    'function render() {\n',
+    "function render() {\n  if (globalThis.__renderBodyClasses) globalThis.__renderBodyClasses.push(document.body.className);\n"
+  ).replace(
     /document\.addEventListener\('DOMContentLoaded', init\);\s*\}\)\(\);\s*$/,
     [
       'globalThis.__popupTest = {',
@@ -234,9 +237,12 @@ function instrumentPopup(source) {
       '  renderDomainGroup,',
       '  render,',
       '  loadEntries,',
+      '  addCurrentPage,',
+      '  toggleViewMode,',
       '  init,',
       '  persistExpandedDomains,',
       '  persistViewMode,',
+      '  __renderBodyClasses: globalThis.__renderBodyClasses,',
       '};',
       "document.addEventListener('DOMContentLoaded', init);",
       '})();'
@@ -244,7 +250,8 @@ function instrumentPopup(source) {
   );
 }
 
-function createHarness() {
+function createHarness(options = {}) {
+  const activeTab = options.tab || null;
   const document = new TestDocument();
   const storage = {};
   const getCalls = [];
@@ -286,7 +293,7 @@ function createHarness() {
       },
       tabs: {
         query(query, callback) {
-          callback([]);
+          callback(activeTab ? [activeTab] : []);
         },
         create() {},
         remove() {}
@@ -306,6 +313,7 @@ function createHarness() {
     requestAnimationFrame(callback) {
       callback();
     },
+    __renderBodyClasses: [],
     setTimeout(callback) {
       return callback();
     }
@@ -632,6 +640,24 @@ async function main() {
   }
 
   {
+    const { api, storage } = createHarness({
+      tab: {
+        title: 'Brave Settings',
+        url: 'brave://settings/',
+        favIconUrl: 'chrome://favicon/size/32/brave://settings'
+      }
+    });
+
+    await api.loadEntries();
+    await api.addCurrentPage();
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY].length, 1);
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].title, 'Brave Settings');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].url, 'brave://settings');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].domain, 'brave://settings');
+  }
+
+  {
     const { api } = createHarness();
     const tab = {
       title: 'Saved current page',
@@ -675,6 +701,41 @@ async function main() {
     assert.strictEqual(api.els.viewModeBtn.disabled, true);
     assert.strictEqual(api.els.viewModeBtn.title, 'Grouped view is locked while organizing');
     assert.strictEqual(api.els.viewModeBtn.getAttribute('aria-label'), 'Grouped view is locked while organizing');
+  }
+
+  {
+    const { api } = createHarness();
+    const now = Date.now();
+    api.state.viewMode = 'flat';
+    api.state.entries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs A', url: 'https://docs.example/a' }, now),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs B', url: 'https://docs.example/b' }, now)
+    ].map(entry => ({ ...entry, domain: 'Docs' }));
+    api.state.expandedDomains.add('Docs');
+    api.render();
+
+    await api.toggleViewMode();
+
+    assert.ok(
+      api.state.isTransitioningMode === false,
+      'view-mode transition should release its transition guard'
+    );
+    assert.ok(
+      api.els.entriesList.querySelector('.domain-group'),
+      'flat-to-grouped switch should render grouped DOM'
+    );
+    assert.ok(
+      api.els.entriesList.querySelector('.entry-card'),
+      'grouped DOM should contain entry cards'
+    );
+    assert.ok(
+      api.els.entriesList.querySelectorAll('.entry-card').every(card => !card.style.animation),
+      'mode-switch render should not attach the ordinary fresh-entry inline animation'
+    );
+    assert.ok(
+      api.__renderBodyClasses.some(className => /\bmode-enter-grouped\b/.test(className)),
+      'mode-switch render should happen while the mode-enter class is already present'
+    );
   }
 }
 

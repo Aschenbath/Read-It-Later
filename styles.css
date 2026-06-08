@@ -1610,20 +1610,38 @@ body.mode-enter-grouped .domain-group {
 }
 
 body.mode-enter-grouped .domain-group-entries .entry-card {
+  --mode-enter-x: -35px;
   opacity: 0;
-  transform: translateY(-16px) translateX(-35px) scale(0.9);
-  animation: cardEnterGrouped 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  transform: translateY(-16px) translateX(var(--mode-enter-x)) scale(0.9);
+  animation: cardEnterGrouped 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(even) {
-  transform: translateY(-16px) translateX(35px) scale(0.9);
+  --mode-enter-x: 35px;
+  transform: translateY(-16px) translateX(var(--mode-enter-x)) scale(0.9);
 }
 
 @keyframes cardEnterGrouped {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) translateX(var(--mode-enter-x, -35px)) scale(0.9);
+  }
   to {
     opacity: 1;
     transform: translateX(0) translateY(0) scale(1);
   }
+}
+
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card {
+  opacity: 0;
+  transform: translateY(-16px) translateX(var(--mode-enter-x, -35px)) scale(0.9);
+  transition: none;
+  animation-fill-mode: both;
+}
+
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(even) {
+  --mode-enter-x: 35px;
+  transform: translateY(-16px) translateX(var(--mode-enter-x)) scale(0.9);
 }
 
 body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(1) {
@@ -1661,10 +1679,14 @@ body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(8) {
 body.mode-enter-flat .entry-card {
   opacity: 0;
   transform: translateY(-20px) scale(0.92);
-  animation: cardEnterFlat 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: cardEnterFlat 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 @keyframes cardEnterFlat {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.92);
+  }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
