@@ -1322,13 +1322,19 @@ h1 {
 
 .domain-group-content {
   max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  overflow: visible;
+  transition:
+    max-height 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
+    overflow 0s 0.45s;
   pointer-events: none;
 }
 
 .domain-group-content.is-expanded {
   max-height: 2000px;
+  overflow: hidden;
+  transition:
+    max-height 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
+    overflow 0s;
   pointer-events: auto;
 }
 
