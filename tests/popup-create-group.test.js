@@ -420,6 +420,10 @@ async function main() {
     const header = node.querySelector('.domain-group-header');
     const chevron = node.querySelector('.domain-group-chevron');
 
+    assert.strictEqual(header.getAttribute('role'), undefined);
+    assert.strictEqual(header.tabIndex, undefined);
+    assert.strictEqual(header.getAttribute('aria-expanded'), undefined);
+
     header.click();
 
     assert.strictEqual(api.state.expandedDomains.has('Empty'), false);

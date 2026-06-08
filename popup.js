@@ -738,10 +738,12 @@ function renderDomainGroup(group) {
 
   const header = document.createElement('div');
   header.className = 'domain-group-header';
-  header.setAttribute('role', 'button');
-  header.tabIndex = 0;
-  header.setAttribute('aria-label', `${group.count} pages from ${group.domain}`);
-  header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+  if (group.count > 0) {
+    header.setAttribute('role', 'button');
+    header.tabIndex = 0;
+    header.setAttribute('aria-label', `${group.count} pages from ${group.domain}`);
+    header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+  }
 
   // Use the first entry's favicon for the group
   const firstEntry = group.entries[0];
