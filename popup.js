@@ -808,10 +808,13 @@ function renderDomainGroup(group) {
           await persistOpenedTabs();
 
           // Update button UI
+          const iconSpan = toggleBtn.querySelector('.action-icon');
+          if (iconSpan) {
+            iconSpan.className = 'action-icon action-icon-open-all';
+          }
           toggleBtn.classList.remove('is-opened');
           toggleBtn.title = `Open all ${group.count} pages`;
           toggleBtn.setAttribute('aria-label', `Open all ${group.count} pages from ${group.domain}`);
-          toggleBtn.innerHTML = '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
         } else {
           // Open all tabs for this domain
           const tabIds = [];
@@ -829,10 +832,13 @@ function renderDomainGroup(group) {
             await persistOpenedTabs();
 
             // Update button UI
+            const iconSpan = toggleBtn.querySelector('.action-icon');
+            if (iconSpan) {
+              iconSpan.className = 'action-icon action-icon-close-all';
+            }
             toggleBtn.classList.add('is-opened');
             toggleBtn.title = `Close all ${group.count} tabs`;
             toggleBtn.setAttribute('aria-label', `Close all ${group.count} tabs from ${group.domain}`);
-            toggleBtn.innerHTML = '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>';
           } else {
             state.openedDomainTabs.delete(domain);
             await persistOpenedTabs();
