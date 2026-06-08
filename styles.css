@@ -1362,6 +1362,39 @@ h1 {
   transform: translateY(-16px) translateX(35px) scale(0.9);
 }
 
+/* Reverse stagger delays for collapsing (last item disappears first) */
+.domain-group-entries .entry-card:nth-child(1) {
+  transition-delay: 0.42s;
+}
+
+.domain-group-entries .entry-card:nth-child(2) {
+  transition-delay: 0.36s;
+}
+
+.domain-group-entries .entry-card:nth-child(3) {
+  transition-delay: 0.3s;
+}
+
+.domain-group-entries .entry-card:nth-child(4) {
+  transition-delay: 0.24s;
+}
+
+.domain-group-entries .entry-card:nth-child(5) {
+  transition-delay: 0.18s;
+}
+
+.domain-group-entries .entry-card:nth-child(6) {
+  transition-delay: 0.12s;
+}
+
+.domain-group-entries .entry-card:nth-child(7) {
+  transition-delay: 0.06s;
+}
+
+.domain-group-entries .entry-card:nth-child(8) {
+  transition-delay: 0s;
+}
+
 .domain-group-content.is-expanded .domain-group-entries .entry-card {
   opacity: 1;
   transform: translateY(0) translateX(0) scale(1);
