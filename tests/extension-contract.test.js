@@ -80,6 +80,8 @@ assert.ok(popupJs.includes("event.key === 'ArrowUp'"), 'keyboard navigation shou
 assert.ok(popupJs.includes("event.key === 'Delete'"), 'keyboard navigation should support Delete on focused entries');
 assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry open action should be separated from delete action');
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
+assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
+assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
 assert.ok(!popupJs.includes('`${state.entries.length} saved`'), 'idle footer should not show a passive saved count');
 assert.ok(!popupJs.includes("const card = document.createElement('button')"), 'entry card should not be a button containing another button');
 

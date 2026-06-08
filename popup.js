@@ -14,7 +14,7 @@ const state = {
   selectionMode: false,
   selectedIds: new Set(),
   showCreateGroup: false,
-  viewMode: 'grouped' // 'grouped' or 'flat'
+  viewMode: 'flat' // 'grouped' or 'flat'
 };
 
 const els = {};
@@ -1002,6 +1002,7 @@ function init() {
   els.emptyState = byId('emptyState');
   els.emptyTitle = byId('emptyTitle');
   els.statusText = byId('statusText');
+  document.body.classList.toggle('flat-view', state.viewMode === 'flat');
   bind();
   loadEntries().catch((error) => {
     setStatus(error && error.message ? error.message : 'Could not load list');
