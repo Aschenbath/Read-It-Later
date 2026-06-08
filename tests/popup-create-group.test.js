@@ -231,7 +231,6 @@ function instrumentPopup(source) {
       '  removeCustomGroup,',
       '  commitSelectionToGroup,',
       '  renderDomainGroup,',
-      '  renderFocusedGroupView,',
       '  render',
       '};',
       "document.addEventListener('DOMContentLoaded', init);",
@@ -409,18 +408,25 @@ async function main() {
     api.state.viewMode = 'grouped';
     api.render();
 
-    const docsHeader = api.els.entriesList.querySelector('.domain-group-header');
+    const docsGroup = api.els.entriesList.children[0];
+    const docsHeader = docsGroup.querySelector('.domain-group-header');
+    const docsContent = docsGroup.querySelector('.domain-group-content');
+
+    assert.strictEqual(docsHeader.getAttribute('aria-expanded'), 'false');
+    assert.strictEqual(docsContent.style.display, 'none');
+
     docsHeader.click();
 
-    assert.strictEqual(api.state.focusedGroupDomain, 'docs.example');
-    assert.strictEqual(api.els.entriesList.children.length, 1);
-    assert.strictEqual(api.els.entriesList.children[0].className, 'focused-group-view');
-    assert.strictEqual(api.els.entriesList.querySelectorAll('.entry-card').length, 2);
-
-    api.els.entriesList.querySelector('.focused-group-back').click();
-
-    assert.strictEqual(api.state.focusedGroupDomain, '');
+    assert.strictEqual(api.state.expandedDomains.has('docs.example'), true);
+    assert.strictEqual(docsHeader.getAttribute('aria-expanded'), 'true');
+    assert.strictEqual(docsContent.style.display, 'block');
     assert.strictEqual(api.els.entriesList.querySelectorAll('.domain-group').length, 2);
+    assert.strictEqual(docsGroup.querySelectorAll('.entry-card').length, 2);
+
+    docsHeader.click();
+
+    assert.strictEqual(api.state.expandedDomains.has('docs.example'), false);
+    assert.strictEqual(docsHeader.getAttribute('aria-expanded'), 'false');
   }
 
   {
