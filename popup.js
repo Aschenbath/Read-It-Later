@@ -726,12 +726,18 @@ function render() {
       els.clearSearchBtn.title = 'Exit selection mode';
       els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
     } else {
-      // In selection mode but no items selected, show normal search
+      // In selection mode but no items selected
+      // Clear the search query so newly created groups are visible
+      if (state.query) {
+        state.query = '';
+        els.searchInput.value = '';
+      }
+      // Show search box as normal, but keep exit button visible
       els.searchInput.value = state.query;
       els.searchInput.disabled = false;
-      els.clearSearchBtn.classList.toggle('hidden', !state.query);
-      els.clearSearchBtn.title = 'Clear search';
-      els.clearSearchBtn.setAttribute('aria-label', 'Clear search');
+      els.clearSearchBtn.classList.remove('hidden'); // Keep exit button visible
+      els.clearSearchBtn.title = 'Exit selection mode';
+      els.clearSearchBtn.setAttribute('aria-label', 'Exit selection mode');
     }
   } else {
     // Normal mode
