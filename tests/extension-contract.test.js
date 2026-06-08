@@ -385,12 +385,21 @@ assert.ok(!readme.includes('\u{1f5d1}'), 'README should describe the CSS delete 
 assert.ok(popupJs.includes("del.setAttribute('aria-label'"), 'delete button should keep an accessible label');
 
 assert.ok(backgroundJs.includes('ReadLaterCore.STORAGE_KEY'), 'background shortcut should use the shared storage key');
-assert.ok(backgroundJs.includes('Array.isArray'), 'background shortcut should tolerate corrupted storage values');
+assert.ok(backgroundJs.includes('ReadLaterCore.normalizeEntries'), 'background shortcut should rebuild stored entries through the shared recovery helper');
 assert.ok(backgroundJs.includes('ReadLaterCore.findEntryByUrl'), 'background shortcut should detect existing entries with normalized URLs');
 assert.ok(backgroundJs.includes('ReadLaterCore.deleteEntry'), 'background shortcut should remove the normalized existing entry');
 assert.ok(backgroundJs.includes('ReadLaterCore.upsertEntry'), 'background shortcut should add pages through the shared dedupe logic');
 assert.ok(!backgroundJs.includes('e.url === entry.url'), 'background shortcut must not compare raw URLs');
 assert.ok(!backgroundJs.includes('chrome.notifications.getAll'), 'notification cleanup should clear only the notification it created');
+assert.ok(
+  popupJs.includes('ReadLaterCore.normalizeEntries(result[storageKey])'),
+  'popup startup should rebuild stored entries through the shared recovery helper before render'
+);
+assert.ok(
+  read('read-later-core.js').includes('function normalizeEntries') &&
+    read('read-later-core.js').includes('isSavableUrl(entry.url)'),
+  'shared storage recovery should drop entries that cannot be saved/opened by the current URL policy'
+);
 
 const storageChangedBlock = popupJs.match(/chrome\.storage\.onChanged\.addListener\(\(changes, areaName\) => \{[\s\S]*?\n  \}\);/)?.[0] || '';
 assert.ok(

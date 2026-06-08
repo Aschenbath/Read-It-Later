@@ -9,6 +9,7 @@ const {
   groupEntriesByDomain,
   isSavableTab,
   isSafeIconUrl,
+  normalizeEntries,
   normalizeEntry,
   normalizeUrl,
   sortEntriesForDisplay,
@@ -62,13 +63,21 @@ assert.deepStrictEqual(buildEntryFromTab({
 
 assert.strictEqual(isSafeIconUrl('https://example.com/favicon.ico'), true);
 assert.strictEqual(isSafeIconUrl('data:image/png;base64,AAAA'), true);
+assert.strictEqual(isSafeIconUrl('data:image/x-icon;base64,AAAA'), true);
 assert.strictEqual(isSafeIconUrl('chrome://favicon/size/32/https://example.com'), true);
+assert.strictEqual(isSafeIconUrl('data:image/svg+xml,<svg onload="alert(1)"></svg>'), false);
+assert.strictEqual(isSafeIconUrl('data:text/html,<img src=x onerror=alert(1)>'), false);
 assert.strictEqual(isSafeIconUrl('http://127.0.0.1:8080/logo.png'), false);
 assert.strictEqual(isSafeIconUrl('http://localhost:8080/logo.png'), false);
 assert.strictEqual(buildEntryFromTab({
   title: 'Local app',
   url: 'http://127.0.0.1:8080/dashboard',
   favIconUrl: 'http://127.0.0.1:8080/logo.png'
+}, now).favIconUrl, '');
+assert.strictEqual(buildEntryFromTab({
+  title: 'Unsafe icon',
+  url: 'https://example.com/unsafe-icon',
+  favIconUrl: 'data:image/svg+xml,<svg onload="alert(1)"></svg>'
 }, now).favIconUrl, '');
 
 assert.deepStrictEqual(normalizeEntry({
@@ -86,6 +95,31 @@ assert.deepStrictEqual(normalizeEntry({
   createdAt: 1,
   updatedAt: 2
 });
+
+const recoveredEntries = normalizeEntries([
+  null,
+  0,
+  { title: 'Blank URL', url: '' },
+  { title: 'Malformed URL', url: 'not a url' },
+  { title: 'Script URL', url: 'javascript:alert(1)' },
+  {
+    title: 'Safe page',
+    url: 'https://example.com/safe#section',
+    favIconUrl: 'data:image/svg+xml,<svg onload="alert(1)"></svg>',
+    updatedAt: now - 100
+  },
+  {
+    title: 'Extensions',
+    url: 'chrome://extensions/',
+    favIconUrl: 'chrome://favicon/size/32/chrome://extensions',
+    updatedAt: now
+  }
+], now);
+assert.deepStrictEqual(recoveredEntries.map(entry => entry.url), [
+  'chrome://extensions',
+  'https://example.com/safe'
+]);
+assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Safe page').favIconUrl, '');
 
 assert.strictEqual(normalizeEntry({
   title: 'Manual group entry',

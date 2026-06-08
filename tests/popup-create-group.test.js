@@ -233,6 +233,7 @@ function instrumentPopup(source) {
       '  commitSelectionToGroup,',
       '  renderDomainGroup,',
       '  render,',
+      '  loadEntries,',
       '  init,',
       '  persistExpandedDomains,',
       '  persistViewMode,',
@@ -572,6 +573,27 @@ async function main() {
     await Promise.resolve();
 
     assert.strictEqual(getCalls.length, 0, 'popup-originated view-mode writes should not reload and re-render the same popup');
+  }
+
+  {
+    const { api, storage } = createHarness();
+    storage[ReadLaterCore.STORAGE_KEY] = [
+      null,
+      { title: 'Blank URL', url: '' },
+      { title: 'Malformed URL', url: 'not a url' },
+      { title: 'Script URL', url: 'javascript:alert(1)' },
+      {
+        title: 'Recovered page',
+        url: 'https://docs.example/recovered#section',
+        favIconUrl: 'data:image/svg+xml,<svg onload="alert(1)"></svg>',
+        updatedAt: 1000
+      }
+    ];
+
+    await api.loadEntries();
+
+    assert.deepStrictEqual(api.state.entries.map(entry => entry.url), ['https://docs.example/recovered']);
+    assert.strictEqual(api.state.entries[0].favIconUrl, '');
   }
 
   {

@@ -18,9 +18,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 
       // Load existing entries
       const result = await chrome.storage.local.get([storageKey]);
-      const entries = Array.isArray(result[storageKey])
-        ? result[storageKey].map(entry => ReadLaterCore.normalizeEntry(entry))
-        : [];
+      const entries = ReadLaterCore.normalizeEntries(result[storageKey]);
 
       // Build entry from tab
       const entry = ReadLaterCore.buildEntryFromTab(tab, Date.now());

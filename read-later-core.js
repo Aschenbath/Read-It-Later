@@ -1,5 +1,17 @@
 (function () {
 const STORAGE_KEY = 'readLaterItems';
+const SAVABLE_PROTOCOLS = new Set(['http:', 'https:', 'chrome:', 'edge:']);
+const SAFE_DATA_IMAGE_TYPES = new Set([
+  'avif',
+  'bmp',
+  'gif',
+  'jpeg',
+  'jpg',
+  'png',
+  'vnd.microsoft.icon',
+  'webp',
+  'x-icon'
+]);
 
 function cleanText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
@@ -45,10 +57,24 @@ function idFromUrl(value) {
   return encodeURIComponent(normalizeUrl(value));
 }
 
+function isSavableUrl(value) {
+  const url = normalizeUrl(value);
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return SAVABLE_PROTOCOLS.has(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 function isSafeIconUrl(value) {
   const raw = cleanText(value);
   if (!raw) return false;
-  if (/^data:image\//i.test(raw)) return true;
+  const dataImageMatch = raw.match(/^data:image\/([a-z0-9.+-]+)(?:[;,]|$)/i);
+  if (dataImageMatch) {
+    return SAFE_DATA_IMAGE_TYPES.has(dataImageMatch[1].toLowerCase());
+  }
   try {
     const parsed = new URL(raw);
     return parsed.protocol === 'https:' || parsed.protocol === 'chrome:';
@@ -85,6 +111,22 @@ function buildEntryFromTab(tab, now = Date.now()) {
     createdAt: now,
     updatedAt: now
   }, now);
+}
+
+function normalizeEntries(entries, now = Date.now()) {
+  const list = Array.isArray(entries) ? entries : [];
+  const normalized = [];
+  for (const item of list) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      continue;
+    }
+    const entry = normalizeEntry(item, now);
+    if (!entry.id || !isSavableUrl(entry.url)) {
+      continue;
+    }
+    normalized.push(entry);
+  }
+  return sortEntriesForDisplay(normalized);
 }
 
 function sortEntriesForDisplay(entries) {
@@ -203,14 +245,7 @@ function filterEntries(entries, query) {
 }
 
 function isSavableTab(tab) {
-  const url = normalizeUrl(tab && tab.url);
-  if (!url) return false;
-  try {
-    const parsed = new URL(url);
-    return ['http:', 'https:', 'chrome:', 'edge:'].includes(parsed.protocol);
-  } catch {
-    return false;
-  }
+  return isSavableUrl(tab && tab.url);
 }
 
 function groupEntriesByDomain(entries, customGroups = []) {
@@ -268,7 +303,9 @@ globalThis.ReadLaterCore = {
   groupEntriesByDomain,
   idFromUrl,
   isSavableTab,
+  isSavableUrl,
   isSafeIconUrl,
+  normalizeEntries,
   normalizeEntry,
   normalizeUrl,
   sortEntriesForDisplay,

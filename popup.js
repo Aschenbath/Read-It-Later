@@ -196,8 +196,7 @@ async function loadEntries() {
     [viewModeStorageKey]: 'flat',
     [customGroupsStorageKey]: []
   });
-  const entries = Array.isArray(result[storageKey]) ? result[storageKey] : [];
-  state.entries = ReadLaterCore.sortEntriesForDisplay(entries.map(entry => ReadLaterCore.normalizeEntry(entry)));
+  state.entries = ReadLaterCore.normalizeEntries(result[storageKey]);
 
   // Restore opened domain tabs state
   const savedOpenedTabs = result.openedDomainTabs || {};

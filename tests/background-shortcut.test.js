@@ -117,6 +117,28 @@ async function main() {
 
   {
     const harness = createHarness({
+      tab: { title: 'Fresh Article', url: 'https://fresh.example/post#intro' },
+      storage: {
+        [storageKey]: [
+          null,
+          { title: 'Blank URL', url: '' },
+          { title: 'Malformed URL', url: 'not a url' },
+          { title: 'Script URL', url: 'javascript:alert(1)' },
+          oldEntry
+        ]
+      }
+    });
+
+    await harness.quickSave();
+
+    assert.deepStrictEqual(
+      harness.env.storage[storageKey].map(entry => entry.url),
+      ['https://fresh.example/post', 'https://example.com/read']
+    );
+  }
+
+  {
+    const harness = createHarness({
       tab: { title: 'Extensions', url: 'chrome://extensions' },
       storage: { [storageKey]: [oldEntry] }
     });
