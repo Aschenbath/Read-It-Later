@@ -458,12 +458,15 @@ async function main() {
 
     assert.strictEqual(chevron.getAttribute('role'), 'button');
     assert.strictEqual(chevron.tabIndex, 0);
+    assert.strictEqual(chevron.title, 'Remove empty group Keyboard Empty');
     assert.strictEqual(chevron.getAttribute('aria-label'), 'Remove empty group Keyboard Empty');
 
     await dispatchAndWait(chevron, { type: 'keydown', key: 'Enter' });
 
     assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Keyboard Empty'), true);
     assert.deepStrictEqual(Array.from(api.state.customGroups), ['Keyboard Empty']);
+    assert.strictEqual(chevron.title, 'Confirm remove empty group Keyboard Empty');
+    assert.strictEqual(chevron.getAttribute('aria-label'), 'Confirm remove empty group Keyboard Empty');
 
     await dispatchAndWait(chevron, { type: 'keydown', key: 'Enter' });
     await Promise.resolve();
