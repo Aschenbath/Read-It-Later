@@ -20,8 +20,7 @@ const state = {
   selectedIds: new Set(),
   pendingGroupSelectedIds: [],
   showCreateGroup: false,
-  viewMode: 'flat', // 'grouped' or 'flat'
-  isTransitioningMode: false
+  viewMode: 'flat' // 'grouped' or 'flat'
 };
 
 const els = {};
@@ -255,44 +254,8 @@ function exitSelectionMode() {
   render();
 }
 
-async function toggleViewMode() {
-  // Prevent multiple transitions at once
-  if (state.isTransitioningMode) return;
-  state.isTransitioningMode = true;
-
-  // Disable the button during transition
-  if (els.viewModeBtn) {
-    els.viewModeBtn.disabled = true;
-  }
-
-  const isCurrentlyGrouped = state.viewMode === 'grouped';
-  const exitClass = isCurrentlyGrouped ? 'mode-exit-grouped' : 'mode-exit-flat';
-  const enterClass = isCurrentlyGrouped ? '' : 'mode-enter-grouped';
-
-  // Phase 1: Exit animation
-  document.body.classList.add(exitClass);
-
-  if (isCurrentlyGrouped) {
-    // Mark domain groups for container fade-out
-    const domainGroups = els.entriesList.querySelectorAll('.domain-group');
-    domainGroups.forEach(group => {
-      group.classList.add('is-transitioning');
-      // Mark cards for staggered exit
-      const cards = group.querySelectorAll('.entry-card');
-      cards.forEach(card => card.classList.add('is-exiting'));
-    });
-  } else {
-    // Mark all flat cards for exit
-    const cards = els.entriesList.querySelectorAll('.entry-card');
-    cards.forEach(card => card.classList.add('is-exiting'));
-  }
-
-  // Wait for exit animation (0.6s)
-  await new Promise(resolve => setTimeout(resolve, 600));
-
-  // Phase 2: Switch mode and re-render
-  state.viewMode = isCurrentlyGrouped ? 'flat' : 'grouped';
-  document.body.classList.remove(exitClass);
+function toggleViewMode() {
+  state.viewMode = state.viewMode === 'grouped' ? 'flat' : 'grouped';
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
 
   persistViewMode().catch((error) => {
@@ -300,23 +263,6 @@ async function toggleViewMode() {
   });
 
   render();
-
-  // Phase 3: Enter animation. Flat lists should land still after render.
-  if (enterClass) {
-    document.body.classList.add(enterClass);
-    await new Promise(resolve => setTimeout(resolve, 700));
-  }
-
-  // Clean up
-  if (enterClass) {
-    document.body.classList.remove(enterClass);
-  }
-  state.isTransitioningMode = false;
-
-  // Re-enable the button
-  if (els.viewModeBtn) {
-    els.viewModeBtn.disabled = false;
-  }
 }
 
 function toggleSelection(entryId) {

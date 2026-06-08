@@ -312,6 +312,18 @@ assert.ok(
   /\.domain-group-content\.is-revealing \.domain-group-entries\s*\{[\s\S]*?animation:\s*groupContentReveal/.test(css),
   'content reveal animation should only apply inside the active expanding group'
 );
+const toggleViewModeBlock = popupJs.match(/(?:async )?function toggleViewMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(toggleViewModeBlock, 'popup should keep a dedicated view-mode toggle function');
+assert.ok(!toggleViewModeBlock.includes('setTimeout'), 'view-mode switching should be immediate without animation wait timers');
+assert.ok(!toggleViewModeBlock.includes('mode-exit'), 'view-mode switching should not attach full-list exit animation classes');
+assert.ok(!toggleViewModeBlock.includes('mode-enter'), 'view-mode switching should not attach full-list enter animation classes');
+assert.ok(!popupJs.includes('isTransitioningMode'), 'view-mode switching should not lock the button behind a long transition state');
+assert.ok(!popupJs.includes('is-exiting'), 'view-mode switching should not mark every card as exiting');
+assert.ok(!popupJs.includes('is-transitioning'), 'view-mode switching should not mark every group as transitioning');
+assert.ok(!css.includes('body.mode-exit-'), 'CSS should not include full-list view-mode exit animations');
+assert.ok(!css.includes('body.mode-enter-'), 'CSS should not include full-list view-mode enter animations');
+assert.ok(!css.includes('cardEnterGrouped'), 'grouped view should not replay child-card enter animations after mode switching');
+assert.ok(!css.includes('containerFadeIn'), 'grouped view should not replay container enter animations after mode switching');
 const modeEnterFlatBlock = css.match(/body\.mode-enter-flat \.entry-card\s*\{[\s\S]*?\n\}/)?.[0] || '';
 assert.strictEqual(modeEnterFlatBlock, '', 'grouped-to-flat view switching should not attach a flat-card enter animation block');
 assert.ok(!css.includes('@keyframes cardEnterFlat'), 'flat list should not replay a card-enter animation after grouped-to-flat switching');
