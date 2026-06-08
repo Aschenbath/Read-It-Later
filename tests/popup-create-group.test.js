@@ -410,6 +410,25 @@ async function main() {
 
   {
     const { api } = createHarness();
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Restored grouped page',
+      url: 'https://docs.example/restored'
+    }, 1000);
+    api.state.expandedDomains.add('Docs');
+
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries: [entry],
+      count: 1
+    });
+    const contentWrap = node.querySelector('.domain-group-content');
+
+    assert.strictEqual(contentWrap.classList.contains('is-expanded'), true, 'already-expanded groups should not replay the open animation after render');
+  }
+
+  {
+    const { api } = createHarness();
     api.state.customGroups = ['Empty'];
     const node = api.renderDomainGroup({
       type: 'group',

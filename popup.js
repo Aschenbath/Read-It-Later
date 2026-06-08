@@ -270,19 +270,7 @@ async function toggleViewMode() {
 
   document.body.classList.add(exitClass);
 
-  if (isCurrentlyGrouped) {
-    const domainGroups = els.entriesList.querySelectorAll('.domain-group');
-    domainGroups.forEach(group => {
-      group.classList.add('is-transitioning');
-      const cards = group.querySelectorAll('.entry-card');
-      cards.forEach(card => card.classList.add('is-exiting'));
-    });
-  } else {
-    const cards = els.entriesList.querySelectorAll('.entry-card');
-    cards.forEach(card => card.classList.add('is-exiting'));
-  }
-
-  await new Promise(resolve => setTimeout(resolve, 600));
+  await new Promise(resolve => setTimeout(resolve, 220));
 
   state.viewMode = isCurrentlyGrouped ? 'flat' : 'grouped';
   document.body.classList.remove(exitClass);
@@ -295,7 +283,7 @@ async function toggleViewMode() {
   render();
   document.body.classList.add(enterClass);
 
-  await new Promise(resolve => setTimeout(resolve, 700));
+  await new Promise(resolve => setTimeout(resolve, 260));
 
   document.body.classList.remove(enterClass);
   state.isTransitioningMode = false;
@@ -967,15 +955,34 @@ function renderDomainGroup(group) {
   const contentWrap = document.createElement('div');
   contentWrap.className = 'domain-group-content';
   const shouldExpand = isExpanded;
+  if (shouldExpand) {
+    contentWrap.classList.add('is-expanded');
+  }
+  let groupAnimationTimer = null;
+  let groupUnlockTimer = null;
+
+  function clearPendingGroupAnimation() {
+    if (groupAnimationTimer !== null) {
+      clearTimeout(groupAnimationTimer);
+      groupAnimationTimer = null;
+    }
+    if (groupUnlockTimer !== null) {
+      clearTimeout(groupUnlockTimer);
+      groupUnlockTimer = null;
+    }
+  }
 
   const toggleExpansion = () => {
     if (group.count === 0) return;
 
     clearEmptyGroupDeleteArming();
+    clearPendingGroupAnimation();
+    contentWrap.classList.remove('is-collapsing');
+    header.classList.remove('is-animating');
+
     const previousPositions = snapshotListPositions();
     const wasExpanded = state.expandedDomains.has(group.domain);
 
-    // Prevent clicks during animation
     header.classList.add('is-animating');
 
     if (wasExpanded) {
@@ -986,12 +993,14 @@ function renderDomainGroup(group) {
       header.setAttribute('aria-expanded', 'false');
       contentWrap.classList.add('is-collapsing');
 
-      setTimeout(() => {
+      groupAnimationTimer = setTimeout(() => {
+        groupAnimationTimer = null;
         contentWrap.classList.remove('is-expanded');
         contentWrap.classList.remove('is-collapsing');
         animateListReflow(previousPositions, { exclude: container });
 
-        setTimeout(() => {
+        groupUnlockTimer = setTimeout(() => {
+          groupUnlockTimer = null;
           header.classList.remove('is-animating');
         }, 300);
       }, 770);
@@ -1005,7 +1014,8 @@ function renderDomainGroup(group) {
       contentWrap.classList.add('is-expanded');
       animateListReflow(previousPositions, { exclude: container });
 
-      setTimeout(() => {
+      groupUnlockTimer = setTimeout(() => {
+        groupUnlockTimer = null;
         header.classList.remove('is-animating');
       }, 1050);
     }
@@ -1038,14 +1048,6 @@ function renderDomainGroup(group) {
   contentWrap.appendChild(content);
   container.appendChild(header);
   container.appendChild(contentWrap);
-
-  if (shouldExpand) {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        contentWrap.classList.add('is-expanded');
-      });
-    });
-  }
 
   // Drop zone for dragging entries to this group
   header.addEventListener('dragover', (e) => {

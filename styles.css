@@ -1094,10 +1094,6 @@ h1 {
   pointer-events: auto;
 }
 
-.domain-group-header.is-animating {
-  pointer-events: none;
-}
-
 .domain-group-header:hover,
 .domain-group-header:focus-visible {
   border-color: #a8cebe;
@@ -1497,214 +1493,33 @@ h1 {
 
 /* Mode transition animations */
 
-body.mode-exit-grouped .domain-group {
-  opacity: 1;
-  transform: scale(1);
-  transition:
-    opacity 0.3s ease-out 0.3s,
-    transform 0.3s ease-out 0.3s;
+body.mode-exit-grouped .entries-list,
+body.mode-exit-flat .entries-list {
+  animation: modeListExit 220ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
-body.mode-exit-grouped .domain-group.is-transitioning {
-  opacity: 0;
-  transform: scale(0.95);
+body.mode-enter-grouped .entries-list,
+body.mode-enter-flat .entries-list {
+  animation: modeListEnter 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-body.mode-exit-grouped .domain-group-entries .entry-card {
-  opacity: 1;
-  transform: translateX(0) translateY(0) scale(1);
-  transition:
-    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting {
-  opacity: 0;
-  transform: translateY(-20px) scale(0.92);
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(1) {
-  transition-delay: 0s;
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(2) {
-  transition-delay: 0.08s;
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(3) {
-  transition-delay: 0.16s;
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(4) {
-  transition-delay: 0.24s;
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(5) {
-  transition-delay: 0.32s;
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(6) {
-  transition-delay: 0.4s;
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(7) {
-  transition-delay: 0.48s;
-}
-
-body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(8) {
-  transition-delay: 0.56s;
-}
-
-body.mode-exit-flat .entry-card {
-  opacity: 1;
-  transform: translateX(0) translateY(0) scale(1);
-  transition:
-    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-body.mode-exit-flat .entry-card.is-exiting {
-  opacity: 0;
-  transform: translateY(-20px) scale(0.92);
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(1) {
-  transition-delay: 0s;
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(2) {
-  transition-delay: 0.08s;
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(3) {
-  transition-delay: 0.16s;
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(4) {
-  transition-delay: 0.24s;
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(5) {
-  transition-delay: 0.32s;
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(6) {
-  transition-delay: 0.4s;
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(7) {
-  transition-delay: 0.48s;
-}
-
-body.mode-exit-flat .entry-card.is-exiting:nth-child(8) {
-  transition-delay: 0.56s;
-}
-
-body.mode-enter-grouped .domain-group {
-  opacity: 0;
-  transform: scale(0.95);
-  animation: containerFadeIn 0.3s ease-out forwards;
-}
-
-@keyframes containerFadeIn {
+@keyframes modeListExit {
   to {
-    opacity: 1;
-    transform: scale(1);
+    opacity: 0.42;
+    transform: translateY(-6px);
   }
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card {
-  opacity: 0;
-  transform: translateY(-16px) translateX(-35px) scale(0.9);
-  animation: cardEnterGrouped 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-}
+@keyframes modeListEnter {
+  from {
+    opacity: 0.18;
+    transform: translateY(6px);
+  }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(even) {
-  transform: translateY(-16px) translateX(35px) scale(0.9);
-}
-
-@keyframes cardEnterGrouped {
   to {
     opacity: 1;
-    transform: translateX(0) translateY(0) scale(1);
+    transform: translateY(0);
   }
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(2) {
-  animation-delay: 0.18s;
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(3) {
-  animation-delay: 0.26s;
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(4) {
-  animation-delay: 0.34s;
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(5) {
-  animation-delay: 0.42s;
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(6) {
-  animation-delay: 0.5s;
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(7) {
-  animation-delay: 0.58s;
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(8) {
-  animation-delay: 0.66s;
-}
-
-body.mode-enter-flat .entry-card {
-  opacity: 0;
-  transform: translateY(-20px) scale(0.92);
-  animation: cardEnterFlat 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-}
-
-@keyframes cardEnterFlat {
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-body.mode-enter-flat .entry-card:nth-child(1) {
-  animation-delay: 0s;
-}
-
-body.mode-enter-flat .entry-card:nth-child(2) {
-  animation-delay: 0.08s;
-}
-
-body.mode-enter-flat .entry-card:nth-child(3) {
-  animation-delay: 0.16s;
-}
-
-body.mode-enter-flat .entry-card:nth-child(4) {
-  animation-delay: 0.24s;
-}
-
-body.mode-enter-flat .entry-card:nth-child(5) {
-  animation-delay: 0.32s;
-}
-
-body.mode-enter-flat .entry-card:nth-child(6) {
-  animation-delay: 0.4s;
-}
-
-body.mode-enter-flat .entry-card:nth-child(7) {
-  animation-delay: 0.48s;
-}
-
-body.mode-enter-flat .entry-card:nth-child(8) {
-  animation-delay: 0.56s;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1721,13 +1536,11 @@ body.mode-enter-flat .entry-card:nth-child(8) {
     animation: none !important;
   }
 
-  body.mode-exit-grouped .domain-group,
-  body.mode-exit-grouped .domain-group-entries .entry-card,
-  body.mode-exit-flat .entry-card,
-  body.mode-enter-grouped .domain-group,
-  body.mode-enter-grouped .domain-group-entries .entry-card,
-  body.mode-enter-flat .entry-card {
-    transition: none !important;
+  body.mode-exit-grouped .entries-list,
+  body.mode-exit-flat .entries-list,
+  body.mode-enter-grouped .entries-list,
+  body.mode-enter-flat .entries-list {
+    animation: none !important;
   }
 
   .domain-group-content {

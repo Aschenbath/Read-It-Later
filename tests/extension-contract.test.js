@@ -275,6 +275,7 @@ assert.ok(!css.includes('transition: all'), 'popup motion should transition expl
 const entryHoverBlock = css.match(/\.entry-card:hover \.entry-open-button,[\s\S]*?\n\}/)?.[0] || '';
 const groupHeaderHoverBlock = css.match(/\.domain-group-header:hover,[\s\S]*?\n\}/)?.[0] || '';
 const selectionGroupHoverBlock = css.match(/\.selection-mode \.domain-group-header:hover,[\s\S]*?\n\}/)?.[0] || '';
+const groupHeaderAnimatingBlock = css.match(/\.domain-group-header\.is-animating\s*\{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
   entryHoverBlock && !entryHoverBlock.includes('transform:'),
   'hovering a saved page should not lift, scale, or move the card'
@@ -286,6 +287,10 @@ assert.ok(
 assert.ok(
   selectionGroupHoverBlock && !selectionGroupHoverBlock.includes('transform:'),
   'selection-mode group hover/drop feedback should not scale the group'
+);
+assert.ok(
+  !groupHeaderAnimatingBlock.includes('pointer-events: none'),
+  'group headers should stay immediately clickable while their expand/collapse animation is settling'
 );
 const groupContentBlock = css.match(/\.domain-group-content\s*\{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
@@ -305,9 +310,17 @@ assert.ok(
   'group collapse should keep the explicit is-collapsing animation phase'
 );
 assert.ok(
+  popupJs.includes('let groupAnimationTimer = null;') &&
+    popupJs.includes('let groupUnlockTimer = null;') &&
+    popupJs.includes('function clearPendingGroupAnimation()') &&
+    popupJs.includes('clearTimeout(groupAnimationTimer)') &&
+    popupJs.includes('clearTimeout(groupUnlockTimer)'),
+  'rapid group toggles should cancel stale expand/collapse cleanup timers before scheduling the next animation'
+);
+assert.ok(
   popupJs.includes('contentWrap.offsetHeight;') &&
-    popupJs.includes('requestAnimationFrame(() =>'),
-  'group expansion should keep the forced reflow and initial expanded replay hooks'
+    !popupJs.includes('requestAnimationFrame(() => {\n      requestAnimationFrame(() => {\n        contentWrap.classList.add(\'is-expanded\');'),
+  'group expansion should keep forced reflow for user-opened groups without replaying already-expanded groups after render'
 );
 const groupedEntryBlock = css.match(/\.domain-group-entries \.entry-card\s*\{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
@@ -323,25 +336,32 @@ assert.ok(toggleViewModeBlock.startsWith('async function'), 'view-mode switching
 assert.ok(toggleViewModeBlock.includes('state.isTransitioningMode'), 'view-mode switching should guard against overlapping transitions');
 assert.ok(toggleViewModeBlock.includes('mode-exit-grouped') && toggleViewModeBlock.includes('mode-exit-flat'), 'view-mode switching should attach exit animation classes');
 assert.ok(toggleViewModeBlock.includes('mode-enter-flat') && toggleViewModeBlock.includes('mode-enter-grouped'), 'view-mode switching should attach enter animation classes in both directions');
-assert.ok(toggleViewModeBlock.includes("card.classList.add('is-exiting')"), 'view-mode switching should mark cards for staggered exit');
-assert.ok(toggleViewModeBlock.includes("group.classList.add('is-transitioning')"), 'view-mode switching should mark grouped containers for exit');
-assert.ok(toggleViewModeBlock.includes('setTimeout(resolve, 600)') && toggleViewModeBlock.includes('setTimeout(resolve, 700)'), 'view-mode switching should keep the original exit/enter timing');
+assert.ok(!toggleViewModeBlock.includes("card.classList.add('is-exiting')"), 'view-mode switching should not replay per-card exit animations');
+assert.ok(!toggleViewModeBlock.includes("group.classList.add('is-transitioning')"), 'view-mode switching should not replay per-group exit animations');
+assert.ok(!toggleViewModeBlock.includes('setTimeout(resolve, 600)') && !toggleViewModeBlock.includes('setTimeout(resolve, 700)'), 'view-mode switching should not keep the old long per-card timing');
 assert.ok(css.includes('body.mode-exit-grouped') && css.includes('body.mode-exit-flat'), 'CSS should include full-list view-mode exit animations');
 assert.ok(css.includes('body.mode-enter-grouped') && css.includes('body.mode-enter-flat'), 'CSS should include full-list view-mode enter animations');
-assert.ok(css.includes('cardEnterGrouped') && css.includes('cardEnterFlat'), 'mode enter animations should keep both grouped and flat card keyframes');
-assert.ok(css.includes('containerFadeIn'), 'grouped mode enter should keep the container fade-in keyframe');
-const modeEnterFlatBlock = css.match(/body\.mode-enter-flat \.entry-card\s*\{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
-  modeEnterFlatBlock &&
-    modeEnterFlatBlock.includes('animation: cardEnterFlat') &&
-    modeEnterFlatBlock.includes('translateY(-20px) scale(0.92)'),
-  'grouped-to-flat view switching should keep the flat-card enter animation block'
+  css.includes('body.mode-exit-grouped .entries-list') &&
+    css.includes('body.mode-enter-grouped .entries-list') &&
+    css.includes('body.mode-enter-flat .entries-list') &&
+    css.includes('@keyframes modeListEnter'),
+  'mode enter/exit animations should move the list container instead of each card'
+);
+assert.ok(!css.includes('cardEnterGrouped') && !css.includes('cardEnterFlat'), 'mode enter animations should not replay per-card keyframes');
+assert.ok(!css.includes('containerFadeIn'), 'grouped mode enter should not replay every group container after render');
+assert.ok(
+  !/body\.mode-enter-flat \.entry-card/.test(css) &&
+    !/body\.mode-enter-grouped \.domain-group-entries \.entry-card/.test(css) &&
+    !/body\.mode-exit-flat \.entry-card/.test(css) &&
+    !/body\.mode-exit-grouped \.domain-group-entries \.entry-card/.test(css),
+  'mode switching should not target individual cards because that creates post-render jitter'
 );
 assert.ok(
   css.includes('.domain-group-entries .entry-card:nth-child(even)') &&
     css.includes('translateX(35px) scale(0.9)') &&
-    css.includes('body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(even)'),
-  'group and mode enter animations should keep the alternating left/right choreography'
+    css.includes('.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(even)'),
+  'local group expand/collapse should keep the alternating left/right choreography'
 );
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
