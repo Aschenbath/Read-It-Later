@@ -336,26 +336,29 @@ assert.ok(toggleViewModeBlock.startsWith('async function'), 'view-mode switching
 assert.ok(toggleViewModeBlock.includes('state.isTransitioningMode'), 'view-mode switching should guard against overlapping transitions');
 assert.ok(toggleViewModeBlock.includes('mode-exit-grouped') && toggleViewModeBlock.includes('mode-exit-flat'), 'view-mode switching should attach exit animation classes');
 assert.ok(toggleViewModeBlock.includes('mode-enter-flat') && toggleViewModeBlock.includes('mode-enter-grouped'), 'view-mode switching should attach enter animation classes in both directions');
-assert.ok(!toggleViewModeBlock.includes("card.classList.add('is-exiting')"), 'view-mode switching should not replay per-card exit animations');
-assert.ok(!toggleViewModeBlock.includes("group.classList.add('is-transitioning')"), 'view-mode switching should not replay per-group exit animations');
-assert.ok(!toggleViewModeBlock.includes('setTimeout(resolve, 600)') && !toggleViewModeBlock.includes('setTimeout(resolve, 700)'), 'view-mode switching should not keep the old long per-card timing');
+assert.ok(toggleViewModeBlock.includes("card.classList.add('is-exiting')"), 'view-mode switching should keep the original per-card exit animation hook');
+assert.ok(toggleViewModeBlock.includes("group.classList.add('is-transitioning')"), 'view-mode switching should keep the original per-group exit animation hook');
+assert.ok(toggleViewModeBlock.includes('setTimeout(resolve, 600)') && toggleViewModeBlock.includes('setTimeout(resolve, 700)'), 'view-mode switching should keep the original two-phase mode timing');
 assert.ok(css.includes('body.mode-exit-grouped') && css.includes('body.mode-exit-flat'), 'CSS should include full-list view-mode exit animations');
 assert.ok(css.includes('body.mode-enter-grouped') && css.includes('body.mode-enter-flat'), 'CSS should include full-list view-mode enter animations');
 assert.ok(
-  css.includes('body.mode-exit-grouped .entries-list') &&
-    css.includes('body.mode-enter-grouped .entries-list') &&
-    css.includes('body.mode-enter-flat .entries-list') &&
-    css.includes('@keyframes modeListEnter'),
-  'mode enter/exit animations should move the list container instead of each card'
+  css.includes('body.mode-exit-grouped .domain-group') &&
+    css.includes('body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting') &&
+    css.includes('body.mode-exit-flat .entry-card.is-exiting'),
+  'mode exit animations should keep the original group/card choreography'
 );
-assert.ok(!css.includes('cardEnterGrouped') && !css.includes('cardEnterFlat'), 'mode enter animations should not replay per-card keyframes');
-assert.ok(!css.includes('containerFadeIn'), 'grouped mode enter should not replay every group container after render');
 assert.ok(
-  !/body\.mode-enter-flat \.entry-card/.test(css) &&
-    !/body\.mode-enter-grouped \.domain-group-entries \.entry-card/.test(css) &&
-    !/body\.mode-exit-flat \.entry-card/.test(css) &&
-    !/body\.mode-exit-grouped \.domain-group-entries \.entry-card/.test(css),
-  'mode switching should not target individual cards because that creates post-render jitter'
+  css.includes('cardEnterGrouped') &&
+    css.includes('cardEnterFlat') &&
+    css.includes('containerFadeIn'),
+  'mode enter animations should keep the original grouped/flat keyframes'
+);
+assert.ok(
+  /body\.mode-enter-flat \.entry-card/.test(css) &&
+    /body\.mode-enter-grouped \.domain-group-entries \.entry-card/.test(css) &&
+    /body\.mode-exit-flat \.entry-card/.test(css) &&
+    /body\.mode-exit-grouped \.domain-group-entries \.entry-card/.test(css),
+  'mode switching should target the same individual cards as the established choreography'
 );
 assert.ok(
   css.includes('.domain-group-entries .entry-card:nth-child(even)') &&

@@ -36,10 +36,13 @@ assert.strictEqual(domainFromUrl(''), '');
 
 assert.strictEqual(isSavableTab({ url: 'https://example.com/read' }), true);
 assert.strictEqual(isSavableTab({ url: 'http://127.0.0.1:8080/dashboard' }), true);
-assert.strictEqual(isSavableTab({ url: 'chrome://extensions' }), false);
-assert.strictEqual(isSavableTab({ url: 'edge://settings' }), false);
+assert.strictEqual(isSavableTab({ url: 'chrome://extensions' }), true);
+assert.strictEqual(isSavableTab({ url: 'edge://settings' }), true);
 assert.strictEqual(isSavableTab({ url: 'about:blank' }), false);
 assert.strictEqual(isSavableTab({ url: 'chrome-extension://abc/popup.html' }), false);
+assert.strictEqual(isSavableTab({ url: 'javascript:alert(1)' }), false);
+assert.strictEqual(isSavableTab({ url: 'data:text/html,<h1>x</h1>' }), false);
+assert.strictEqual(isSavableTab({ url: 'file:///C:/Users/aschenbath/Desktop/local.html' }), false);
 assert.strictEqual(isSavableTab({ url: 'not a url' }), false);
 
 assert.deepStrictEqual(buildEntryFromTab({

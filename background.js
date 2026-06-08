@@ -12,7 +12,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
       if (!tab || !ReadLaterCore.isSavableTab(tab)) {
-        showNotification('Cannot save this page', 'Special pages like chrome:// and edge:// cannot be saved');
+        showNotification('Cannot save this page', 'This page type is not supported');
         return;
       }
 

@@ -270,7 +270,19 @@ async function toggleViewMode() {
 
   document.body.classList.add(exitClass);
 
-  await new Promise(resolve => setTimeout(resolve, 220));
+  if (isCurrentlyGrouped) {
+    const domainGroups = els.entriesList.querySelectorAll('.domain-group');
+    domainGroups.forEach(group => {
+      group.classList.add('is-transitioning');
+      const cards = group.querySelectorAll('.entry-card');
+      cards.forEach(card => card.classList.add('is-exiting'));
+    });
+  } else {
+    const cards = els.entriesList.querySelectorAll('.entry-card');
+    cards.forEach(card => card.classList.add('is-exiting'));
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 600));
 
   state.viewMode = isCurrentlyGrouped ? 'flat' : 'grouped';
   document.body.classList.remove(exitClass);
@@ -283,7 +295,7 @@ async function toggleViewMode() {
   render();
   document.body.classList.add(enterClass);
 
-  await new Promise(resolve => setTimeout(resolve, 260));
+  await new Promise(resolve => setTimeout(resolve, 700));
 
   document.body.classList.remove(enterClass);
   state.isTransitioningMode = false;

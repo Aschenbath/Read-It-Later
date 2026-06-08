@@ -123,6 +123,20 @@ async function main() {
 
     await harness.quickSave();
 
+    assert.strictEqual(harness.env.storage[storageKey].length, 2);
+    assert.strictEqual(harness.env.storage[storageKey][0].url, 'chrome://extensions');
+    assert.strictEqual(harness.env.storage[storageKey][0].domain, 'chrome://extensions');
+    assert.strictEqual(harness.env.notifications[0].options.title, 'Saved to Read It Later');
+  }
+
+  {
+    const harness = createHarness({
+      tab: { title: 'Extension popup', url: 'chrome-extension://abc/popup.html' },
+      storage: { [storageKey]: [oldEntry] }
+    });
+
+    await harness.quickSave();
+
     assert.deepStrictEqual(harness.env.setCalls, []);
     assert.strictEqual(harness.env.notifications[0].options.title, 'Cannot save this page');
   }

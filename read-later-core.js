@@ -207,7 +207,7 @@ function isSavableTab(tab) {
   if (!url) return false;
   try {
     const parsed = new URL(url);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return ['http:', 'https:', 'chrome:', 'edge:'].includes(parsed.protocol);
   } catch {
     return false;
   }
