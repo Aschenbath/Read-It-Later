@@ -1258,7 +1258,7 @@ h1 {
 .domain-group-content {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: max-height 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .domain-group-content.is-expanded {
@@ -1269,10 +1269,10 @@ h1 {
   padding: 10px 0 0;
   position: relative;
   opacity: 0;
-  transform: translateY(-16px);
+  transform: translateY(-24px);
   transition:
-    opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.2s,
-    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+    opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 0.15s,
+    transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) 0.15s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries {
@@ -1285,10 +1285,10 @@ h1 {
   transform-origin: top center;
   animation: none;
   opacity: 0;
-  transform: translateY(-8px) scale(0.96);
+  transform: translateY(-14px) scale(0.92);
   transition:
-    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card {
@@ -1297,23 +1297,23 @@ h1 {
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(1) {
-  transition-delay: 0.08s;
+  transition-delay: 0.1s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(2) {
-  transition-delay: 0.14s;
+  transition-delay: 0.18s;
 }
 
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(3) {
-  transition-delay: 0.2s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
   transition-delay: 0.26s;
 }
 
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
+  transition-delay: 0.34s;
+}
+
 .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(5) {
-  transition-delay: 0.32s;
+  transition-delay: 0.42s;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
