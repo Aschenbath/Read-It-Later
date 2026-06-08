@@ -252,6 +252,7 @@ function instrumentPopup(source) {
 
 function createHarness(options = {}) {
   const activeTab = options.tab || null;
+  const getError = options.getError || '';
   const document = new TestDocument();
   const storage = {};
   const getCalls = [];
@@ -265,6 +266,12 @@ function createHarness(options = {}) {
         local: {
           get(keys, callback) {
             getCalls.push(keys);
+            if (getError) {
+              context.chrome.runtime.lastError = { message: getError };
+              callback(undefined);
+              context.chrome.runtime.lastError = null;
+              return;
+            }
             const result = {};
             Object.entries(keys || {}).forEach(([key, fallback]) => {
               result[key] = Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : fallback;
@@ -637,6 +644,26 @@ async function main() {
     assert.strictEqual(api.state.entries[0].domain, 'Docs Queue');
     assert.strictEqual(api.state.entries[0].createdAt, 1000);
     assert.strictEqual(api.state.entries[0].updatedAt, 5000);
+  }
+
+  {
+    const { api } = createHarness({ getError: 'Storage read failed' });
+    const existing = ReadLaterCore.buildEntryFromTab({
+      title: 'Existing page',
+      url: 'https://docs.example/existing'
+    }, 1000);
+    api.state.entries = [existing];
+
+    await assert.rejects(
+      () => api.loadEntries(),
+      /Storage read failed/,
+      'popup storage reads should surface chrome.runtime.lastError'
+    );
+    assert.deepStrictEqual(
+      api.state.entries.map(entry => entry.url),
+      ['https://docs.example/existing'],
+      'failed startup reads should not replace the current list with an empty fallback'
+    );
   }
 
   {

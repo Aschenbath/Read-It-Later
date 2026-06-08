@@ -43,6 +43,10 @@ chrome.commands.onCommand.addListener(async (command) => {
       }
     } catch (error) {
       console.error('Failed to save page:', error);
+      showNotification(
+        'Could not save page',
+        error && error.message ? error.message : 'Storage is unavailable'
+      );
     }
   }
 });

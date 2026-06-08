@@ -66,8 +66,13 @@ function makeFallbackIcon(entry) {
 }
 
 function chromeGet(keys) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     chrome.storage.local.get(keys, (result) => {
+      const err = chrome.runtime && chrome.runtime.lastError;
+      if (err) {
+        reject(new Error(err.message || String(err)));
+        return;
+      }
       resolve(result || {});
     });
   });
