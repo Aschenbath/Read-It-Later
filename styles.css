@@ -535,8 +535,22 @@ h1 {
   box-shadow: 0 6px 18px rgba(79, 155, 133, 0.25);
 }
 
+.add-button.is-selection-mode {
+  border-color: #6aa690;
+  background: #fffdf8;
+  color: #254a3d;
+  box-shadow:
+    0 0 0 3px rgba(79, 155, 133, 0.14),
+    0 8px 18px rgba(79, 155, 133, 0.18);
+}
+
+.add-button.is-selection-mode:hover,
+.add-button.is-selection-mode:focus-visible {
+  background: var(--accent-soft);
+}
+
 .add-button.is-selection-mode .add-icon {
-  opacity: 0.5;
+  opacity: 1;
 }
 
 .add-button.is-selection-mode .add-icon span:nth-child(1),
@@ -969,26 +983,6 @@ h1 {
   color: #798085;
   font-size: 12px;
   line-height: 18px;
-}
-
-.undo-button {
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid #d8cec0;
-  border-radius: 8px;
-  background: #fffdf8;
-  color: #40544e;
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 22px;
-  font-weight: 800;
-}
-
-.undo-button:hover,
-.undo-button:focus-visible {
-  border-color: #abcbbf;
-  background: var(--accent-soft);
-  outline: none;
 }
 
 .hidden {

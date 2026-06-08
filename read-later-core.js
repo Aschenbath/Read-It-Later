@@ -204,7 +204,13 @@ function filterEntries(entries, query) {
 
 function isSavableTab(tab) {
   const url = normalizeUrl(tab && tab.url);
-  return !!url && !/^(about:|chrome:\/\/newtab|edge:\/\/newtab)$/i.test(url);
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function groupEntriesByDomain(entries, customGroups = []) {

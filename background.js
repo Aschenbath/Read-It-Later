@@ -7,6 +7,7 @@ importScripts('read-later-core.js');
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === 'quick-save') {
     try {
+      const storageKey = ReadLaterCore.STORAGE_KEY;
       // Get the current active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
@@ -16,26 +17,28 @@ chrome.commands.onCommand.addListener(async (command) => {
       }
 
       // Load existing entries
-      const result = await chrome.storage.local.get(['readLaterItems']);
-      const entries = result.readLaterItems || [];
+      const result = await chrome.storage.local.get([storageKey]);
+      const entries = Array.isArray(result[storageKey])
+        ? result[storageKey].map(entry => ReadLaterCore.normalizeEntry(entry))
+        : [];
 
       // Build entry from tab
       const entry = ReadLaterCore.buildEntryFromTab(tab, Date.now());
 
       // Check if already saved
-      const existingIndex = entries.findIndex(e => e.url === entry.url);
+      const existingEntry = ReadLaterCore.findEntryByUrl(entries, entry.url);
 
-      if (existingIndex >= 0) {
+      if (existingEntry) {
         // Already saved - remove it (toggle behavior)
-        entries.splice(existingIndex, 1);
-        await chrome.storage.local.set({ readLaterItems: entries });
+        const next = ReadLaterCore.deleteEntry(entries, existingEntry.id);
+        await chrome.storage.local.set({ [storageKey]: next.entries });
 
         // Show notification
         showNotification('Removed from Read It Later', entry.title);
       } else {
-        // Add new entry at the top
-        entries.unshift(entry);
-        await chrome.storage.local.set({ readLaterItems: entries });
+        // Add new entry through shared dedupe/sort logic
+        const next = ReadLaterCore.upsertEntry(entries, entry);
+        await chrome.storage.local.set({ [storageKey]: next.entries });
 
         // Show notification
         showNotification('Saved to Read It Later', entry.title);
@@ -48,7 +51,8 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 // Show a notification to the user
 function showNotification(title, message) {
-  chrome.notifications.create({
+  const notificationId = `read-later-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  chrome.notifications.create(notificationId, {
     type: 'basic',
     iconUrl: 'icons/icon-128.png',
     title: title,
@@ -58,10 +62,6 @@ function showNotification(title, message) {
 
   // Auto-clear notification after 2 seconds
   setTimeout(() => {
-    chrome.notifications.getAll((notifications) => {
-      Object.keys(notifications).forEach((id) => {
-        chrome.notifications.clear(id);
-      });
-    });
+    chrome.notifications.clear(notificationId);
   }, 2000);
 }

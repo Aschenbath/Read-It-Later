@@ -468,7 +468,9 @@ function renderEntry(entry) {
   openButton.addEventListener('mousedown', startLongPress);
   openButton.addEventListener('touchstart', startLongPress, { passive: true });
   openButton.addEventListener('mouseup', cancelLongPress);
+  openButton.addEventListener('mouseleave', cancelLongPress);
   openButton.addEventListener('touchend', cancelLongPress);
+  openButton.addEventListener('touchcancel', cancelLongPress);
   openButton.addEventListener('mousemove', handleMove);
   openButton.addEventListener('touchmove', handleMove, { passive: true });
 
@@ -1011,8 +1013,11 @@ function focusedEntryIndex() {
 }
 
 function focusedEntry() {
-  const index = focusedEntryIndex();
-  return index >= 0 ? state.visibleEntries[index] : null;
+  const entryId = document.activeElement && document.activeElement.dataset
+    ? document.activeElement.dataset.entryId
+    : '';
+  if (!entryId) return null;
+  return state.entries.find(entry => String(entry.id) === String(entryId)) || null;
 }
 
 function bind() {

@@ -7,6 +7,7 @@ const {
   formatSavedAt,
   filterEntries,
   groupEntriesByDomain,
+  isSavableTab,
   isSafeIconUrl,
   normalizeEntry,
   normalizeUrl,
@@ -32,6 +33,14 @@ assert.strictEqual(domainFromUrl('https://www.bilibili.com/video/BV1xx'), 'www.b
 assert.strictEqual(domainFromUrl('chrome://extensions'), 'chrome://extensions');
 assert.strictEqual(domainFromUrl('not a url'), 'not a url');
 assert.strictEqual(domainFromUrl(''), '');
+
+assert.strictEqual(isSavableTab({ url: 'https://example.com/read' }), true);
+assert.strictEqual(isSavableTab({ url: 'http://127.0.0.1:8080/dashboard' }), true);
+assert.strictEqual(isSavableTab({ url: 'chrome://extensions' }), false);
+assert.strictEqual(isSavableTab({ url: 'edge://settings' }), false);
+assert.strictEqual(isSavableTab({ url: 'about:blank' }), false);
+assert.strictEqual(isSavableTab({ url: 'chrome-extension://abc/popup.html' }), false);
+assert.strictEqual(isSavableTab({ url: 'not a url' }), false);
 
 assert.deepStrictEqual(buildEntryFromTab({
   id: 12,

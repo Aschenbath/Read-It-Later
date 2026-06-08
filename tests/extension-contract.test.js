@@ -57,6 +57,7 @@ assert.ok(!html.includes('\u9983'), 'popup HTML should not expose mojibake glyph
 assert.ok(html.includes('class="delete-selected-icon"'), 'bulk delete should use a styled icon span instead of a text glyph');
 
 const popupJs = read('popup.js');
+const backgroundJs = read('background.js');
 [
   'chrome.tabs.query',
   'chrome.storage.local.get',
@@ -126,12 +127,22 @@ assert.ok(
   'batch open should store only real tab ids returned by chrome.tabs.create'
 );
 assert.ok(!popupJs.includes('console.log('), 'popup should not leave debug logging in normal interaction paths');
+assert.ok(
+  popupJs.includes('document.activeElement.dataset.entryId'),
+  'keyboard Enter/Delete should resolve the focused entry by its DOM entry id, not by a flat visibleEntries index'
+);
+assert.ok(
+  !popupJs.includes('return index >= 0 ? state.visibleEntries[index] : null;'),
+  'grouped-view keyboard actions must not map focused DOM index to flat visibleEntries order'
+);
 assert.ok(popupJs.includes("event.key === 'ArrowDown'"), 'keyboard navigation should support ArrowDown');
 assert.ok(popupJs.includes("event.key === 'ArrowUp'"), 'keyboard navigation should support ArrowUp');
 assert.ok(popupJs.includes("event.key === 'Delete'"), 'keyboard navigation should support Delete on focused entries');
 assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry open action should be separated from delete action');
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
 assert.ok(popupJs.includes('suppressNextClickAfterLongPress'), 'long press selection should not be immediately undone by the follow-up click event');
+assert.ok(popupJs.includes("openButton.addEventListener('mouseleave', cancelLongPress)"), 'long press should cancel when the pointer leaves the entry');
+assert.ok(popupJs.includes("openButton.addEventListener('touchcancel', cancelLongPress)"), 'long press should cancel on touchcancel');
 assert.ok(!popupJs.includes('entry.timestamp'), 'entry insertion animation should use stored created/updated timestamps, not a missing timestamp field');
 const deleteSelectedBlock = popupJs.match(/async function deleteSelectedEntries\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
@@ -231,7 +242,12 @@ assert.ok(css.includes('.entry-open-button'), 'entry open button should be style
 assert.ok(css.includes('.entry-meta'), 'entry metadata should be styled for fast scanning');
 assert.ok(css.includes('.entry-card.is-current-tab'), 'current tab entry should have a distinct visual state');
 assert.ok(css.includes('.add-button.is-saved'), 'add button should have a distinct saved state');
-assert.ok(css.includes('.undo-button'), 'undo affordance should be styled');
+assert.ok(css.includes('.add-button.is-selection-mode'), 'selection-mode add button should have an explicit create-group visual state');
+assert.ok(
+  !/\.add-button\.is-selection-mode \.add-icon\s*\{\s*opacity:\s*0\.5;/.test(css),
+  'selection-mode add button should not look disabled'
+);
+assert.ok(!css.includes('.undo-button'), 'stale undo styles should be removed because the undo affordance no longer exists');
 assert.ok(css.includes('.delete-selected-icon'), 'bulk delete button should use a CSS-drawn icon');
 assert.ok(css.includes('.domain-group-header.is-delete-armed'), 'empty group delete arm state should have visible feedback');
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
@@ -250,3 +266,11 @@ assert.ok(popupJs.includes("delIcon.className = 'delete-icon'"), 'delete button 
 assert.ok(!popupJs.includes('del.textContent'), 'delete button should not depend on a text glyph');
 assert.ok(!html.includes('🗑'), 'bulk delete button should not depend on an emoji glyph');
 assert.ok(popupJs.includes("del.setAttribute('aria-label'"), 'delete button should keep an accessible label');
+
+assert.ok(backgroundJs.includes('ReadLaterCore.STORAGE_KEY'), 'background shortcut should use the shared storage key');
+assert.ok(backgroundJs.includes('Array.isArray'), 'background shortcut should tolerate corrupted storage values');
+assert.ok(backgroundJs.includes('ReadLaterCore.findEntryByUrl'), 'background shortcut should detect existing entries with normalized URLs');
+assert.ok(backgroundJs.includes('ReadLaterCore.deleteEntry'), 'background shortcut should remove the normalized existing entry');
+assert.ok(backgroundJs.includes('ReadLaterCore.upsertEntry'), 'background shortcut should add pages through the shared dedupe logic');
+assert.ok(!backgroundJs.includes('e.url === entry.url'), 'background shortcut must not compare raw URLs');
+assert.ok(!backgroundJs.includes('chrome.notifications.getAll'), 'notification cleanup should clear only the notification it created');
