@@ -20,7 +20,8 @@ const state = {
   selectedIds: new Set(),
   pendingGroupSelectedIds: [],
   showCreateGroup: false,
-  viewMode: 'flat' // 'grouped' or 'flat'
+  viewMode: 'flat', // 'grouped' or 'flat'
+  isTransitioningMode: false
 };
 
 const els = {};
@@ -254,10 +255,37 @@ function exitSelectionMode() {
   render();
 }
 
-function toggleViewMode() {
+async function toggleViewMode() {
   if (state.selectionMode) return;
+  if (state.isTransitioningMode) return;
+  state.isTransitioningMode = true;
 
-  state.viewMode = state.viewMode === 'grouped' ? 'flat' : 'grouped';
+  if (els.viewModeBtn) {
+    els.viewModeBtn.disabled = true;
+  }
+
+  const isCurrentlyGrouped = state.viewMode === 'grouped';
+  const exitClass = isCurrentlyGrouped ? 'mode-exit-grouped' : 'mode-exit-flat';
+  const enterClass = isCurrentlyGrouped ? 'mode-enter-flat' : 'mode-enter-grouped';
+
+  document.body.classList.add(exitClass);
+
+  if (isCurrentlyGrouped) {
+    const domainGroups = els.entriesList.querySelectorAll('.domain-group');
+    domainGroups.forEach(group => {
+      group.classList.add('is-transitioning');
+      const cards = group.querySelectorAll('.entry-card');
+      cards.forEach(card => card.classList.add('is-exiting'));
+    });
+  } else {
+    const cards = els.entriesList.querySelectorAll('.entry-card');
+    cards.forEach(card => card.classList.add('is-exiting'));
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  state.viewMode = isCurrentlyGrouped ? 'flat' : 'grouped';
+  document.body.classList.remove(exitClass);
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
 
   persistViewMode().catch((error) => {
@@ -265,6 +293,13 @@ function toggleViewMode() {
   });
 
   render();
+  document.body.classList.add(enterClass);
+
+  await new Promise(resolve => setTimeout(resolve, 700));
+
+  document.body.classList.remove(enterClass);
+  state.isTransitioningMode = false;
+  renderViewModeButtonState();
 }
 
 function toggleSelection(entryId) {
@@ -932,9 +967,6 @@ function renderDomainGroup(group) {
   const contentWrap = document.createElement('div');
   contentWrap.className = 'domain-group-content';
   const shouldExpand = isExpanded;
-  if (shouldExpand) {
-    contentWrap.classList.add('is-expanded');
-  }
 
   const toggleExpansion = () => {
     if (group.count === 0) return;
@@ -951,27 +983,31 @@ function renderDomainGroup(group) {
       persistExpandedDomains().catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
-      contentWrap.classList.remove('is-revealing');
-      contentWrap.classList.remove('is-expanded');
       header.setAttribute('aria-expanded', 'false');
-      animateListReflow(previousPositions, { exclude: container });
+      contentWrap.classList.add('is-collapsing');
+
       setTimeout(() => {
-        header.classList.remove('is-animating');
-      }, 300);
+        contentWrap.classList.remove('is-expanded');
+        contentWrap.classList.remove('is-collapsing');
+        animateListReflow(previousPositions, { exclude: container });
+
+        setTimeout(() => {
+          header.classList.remove('is-animating');
+        }, 300);
+      }, 770);
     } else {
       state.expandedDomains.add(group.domain);
       persistExpandedDomains().catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
       header.setAttribute('aria-expanded', 'true');
+      contentWrap.offsetHeight;
       contentWrap.classList.add('is-expanded');
-      contentWrap.classList.add('is-revealing');
       animateListReflow(previousPositions, { exclude: container });
 
       setTimeout(() => {
-        contentWrap.classList.remove('is-revealing');
         header.classList.remove('is-animating');
-      }, 300);
+      }, 1050);
     }
   };
 
@@ -1002,6 +1038,14 @@ function renderDomainGroup(group) {
   contentWrap.appendChild(content);
   container.appendChild(header);
   container.appendChild(contentWrap);
+
+  if (shouldExpand) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        contentWrap.classList.add('is-expanded');
+      });
+    });
+  }
 
   // Drop zone for dragging entries to this group
   header.addEventListener('dragover', (e) => {
@@ -1077,7 +1121,7 @@ function renderViewModeButtonState() {
   const nextLabel = state.viewMode === 'flat'
     ? 'Show grouped view'
     : 'Show flat list';
-  els.viewModeBtn.disabled = false;
+  els.viewModeBtn.disabled = state.isTransitioningMode;
   els.viewModeBtn.title = nextLabel;
   els.viewModeBtn.setAttribute('aria-label', nextLabel);
 }

@@ -1330,45 +1330,153 @@ h1 {
 }
 
 .domain-group-content {
-  display: none;
+  max-height: 0;
   overflow: visible;
+  transition:
+    max-height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s;
   pointer-events: none;
 }
 
 .domain-group-content.is-expanded {
-  display: block;
+  max-height: 2000px;
+  overflow: hidden;
+  transition:
+    max-height 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
   pointer-events: auto;
 }
 
 .domain-group-entries {
   padding: 10px 0 0;
   position: relative;
-  animation: none;
 }
 
-.domain-group-content.is-revealing .domain-group-entries {
-  animation: groupContentReveal 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes groupContentReveal {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.domain-group-content.is-expanded .domain-group-entries {
+  /* Cards own the staged expand/collapse timing. */
 }
 
 .domain-group-entries .entry-card {
   margin: 0 0 8px;
   transform-origin: top center;
   animation: none;
+  opacity: 0;
+  transform: translateY(-16px) translateX(-35px) scale(0.9);
+  transition:
+    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.domain-group-entries .entry-card:nth-child(even) {
+  transform: translateY(-16px) translateX(35px) scale(0.9);
+}
+
+.domain-group-entries .entry-card:nth-child(1) {
+  transition-delay: 0s;
+}
+
+.domain-group-entries .entry-card:nth-child(2) {
+  transition-delay: 0.06s;
+}
+
+.domain-group-entries .entry-card:nth-child(3) {
+  transition-delay: 0.12s;
+}
+
+.domain-group-entries .entry-card:nth-child(4) {
+  transition-delay: 0.18s;
+}
+
+.domain-group-entries .entry-card:nth-child(5) {
+  transition-delay: 0.24s;
+}
+
+.domain-group-entries .entry-card:nth-child(6) {
+  transition-delay: 0.3s;
+}
+
+.domain-group-entries .entry-card:nth-child(7) {
+  transition-delay: 0.36s;
+}
+
+.domain-group-entries .entry-card:nth-child(8) {
+  transition-delay: 0.42s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card {
   opacity: 1;
-  transform: none;
-  transition: none;
+  transform: translateY(0) translateX(0) scale(1);
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(1) {
+  transition-delay: 0.12s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(2) {
+  transition-delay: 0.24s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(3) {
+  transition-delay: 0.36s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
+  transition-delay: 0.48s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(5) {
+  transition-delay: 0.6s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(6) {
+  transition-delay: 0.72s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(7) {
+  transition-delay: 0.84s;
+}
+
+.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(8) {
+  transition-delay: 0.96s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card {
+  opacity: 0;
+  transform: translateY(-16px) translateX(-35px) scale(0.9);
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(even) {
+  transform: translateY(-16px) translateX(35px) scale(0.9);
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(1) {
+  transition-delay: 0s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(2) {
+  transition-delay: 0.06s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(3) {
+  transition-delay: 0.12s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(4) {
+  transition-delay: 0.18s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(5) {
+  transition-delay: 0.24s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(6) {
+  transition-delay: 0.3s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(7) {
+  transition-delay: 0.36s;
+}
+
+.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(8) {
+  transition-delay: 0.42s;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
@@ -1387,6 +1495,218 @@ h1 {
     inset 0 -1px 0 rgba(79, 155, 133, 0.08);
 }
 
+/* Mode transition animations */
+
+body.mode-exit-grouped .domain-group {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 0.3s ease-out 0.3s,
+    transform 0.3s ease-out 0.3s;
+}
+
+body.mode-exit-grouped .domain-group.is-transitioning {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card {
+  opacity: 1;
+  transform: translateX(0) translateY(0) scale(1);
+  transition:
+    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.92);
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(1) {
+  transition-delay: 0s;
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(2) {
+  transition-delay: 0.08s;
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(3) {
+  transition-delay: 0.16s;
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(4) {
+  transition-delay: 0.24s;
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(5) {
+  transition-delay: 0.32s;
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(6) {
+  transition-delay: 0.4s;
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(7) {
+  transition-delay: 0.48s;
+}
+
+body.mode-exit-grouped .domain-group-entries .entry-card.is-exiting:nth-child(8) {
+  transition-delay: 0.56s;
+}
+
+body.mode-exit-flat .entry-card {
+  opacity: 1;
+  transform: translateX(0) translateY(0) scale(1);
+  transition:
+    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+body.mode-exit-flat .entry-card.is-exiting {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.92);
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(1) {
+  transition-delay: 0s;
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(2) {
+  transition-delay: 0.08s;
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(3) {
+  transition-delay: 0.16s;
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(4) {
+  transition-delay: 0.24s;
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(5) {
+  transition-delay: 0.32s;
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(6) {
+  transition-delay: 0.4s;
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(7) {
+  transition-delay: 0.48s;
+}
+
+body.mode-exit-flat .entry-card.is-exiting:nth-child(8) {
+  transition-delay: 0.56s;
+}
+
+body.mode-enter-grouped .domain-group {
+  opacity: 0;
+  transform: scale(0.95);
+  animation: containerFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes containerFadeIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card {
+  opacity: 0;
+  transform: translateY(-16px) translateX(-35px) scale(0.9);
+  animation: cardEnterGrouped 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(even) {
+  transform: translateY(-16px) translateX(35px) scale(0.9);
+}
+
+@keyframes cardEnterGrouped {
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(3) {
+  animation-delay: 0.26s;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(4) {
+  animation-delay: 0.34s;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(5) {
+  animation-delay: 0.42s;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(6) {
+  animation-delay: 0.5s;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(7) {
+  animation-delay: 0.58s;
+}
+
+body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(8) {
+  animation-delay: 0.66s;
+}
+
+body.mode-enter-flat .entry-card {
+  opacity: 0;
+  transform: translateY(-20px) scale(0.92);
+  animation: cardEnterFlat 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes cardEnterFlat {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+body.mode-enter-flat .entry-card:nth-child(1) {
+  animation-delay: 0s;
+}
+
+body.mode-enter-flat .entry-card:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+body.mode-enter-flat .entry-card:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+body.mode-enter-flat .entry-card:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+body.mode-enter-flat .entry-card:nth-child(5) {
+  animation-delay: 0.32s;
+}
+
+body.mode-enter-flat .entry-card:nth-child(6) {
+  animation-delay: 0.4s;
+}
+
+body.mode-enter-flat .entry-card:nth-child(7) {
+  animation-delay: 0.48s;
+}
+
+body.mode-enter-flat .entry-card:nth-child(8) {
+  animation-delay: 0.56s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1399,6 +1719,15 @@ h1 {
 
   .entry-card {
     animation: none !important;
+  }
+
+  body.mode-exit-grouped .domain-group,
+  body.mode-exit-grouped .domain-group-entries .entry-card,
+  body.mode-exit-flat .entry-card,
+  body.mode-enter-grouped .domain-group,
+  body.mode-enter-grouped .domain-group-entries .entry-card,
+  body.mode-enter-flat .entry-card {
+    transition: none !important;
   }
 
   .domain-group-content {

@@ -287,51 +287,62 @@ assert.ok(
   selectionGroupHoverBlock && !selectionGroupHoverBlock.includes('transform:'),
   'selection-mode group hover/drop feedback should not scale the group'
 );
-assert.ok(!css.includes('stackExpand'), 'group expansion should not stagger/scale every child card');
-assert.ok(!popupJs.includes('--stack-index'), 'group rendering should not assign child-card stagger animation indexes');
-assert.ok(
-  /\.domain-group-entries \.entry-card\s*\{[\s\S]*?animation:\s*none;/.test(css),
-  'grouped entries should be still by default instead of animating every render'
-);
 const groupContentBlock = css.match(/\.domain-group-content\s*\{[\s\S]*?\n\}/)?.[0] || '';
-assert.ok(groupContentBlock && !groupContentBlock.includes('max-height'), 'group expansion should not use max-height accordion animation');
+assert.ok(
+  groupContentBlock &&
+    groupContentBlock.includes('max-height: 0') &&
+    groupContentBlock.includes('max-height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s'),
+  'group expansion should keep the delayed max-height setup for staged collapse'
+);
 assert.ok(
   popupJs.includes('function snapshotListPositions') &&
   popupJs.includes('function animateListReflow'),
-  'group expansion should use FLIP reflow so only displaced items move naturally'
+  'group expansion should keep FLIP reflow alongside the staged card choreography'
 );
 assert.ok(
-  !popupJs.includes("contentWrap.style.maxHeight = contentWrap.scrollHeight + 'px'") &&
-  !popupJs.includes("contentWrap.style.maxHeight = '0'"),
-  'group expansion should not drive layout through max-height style changes'
+  popupJs.includes("contentWrap.classList.add('is-collapsing')") &&
+    popupJs.includes("contentWrap.classList.remove('is-collapsing')"),
+  'group collapse should keep the explicit is-collapsing animation phase'
 );
 assert.ok(
-  popupJs.includes("contentWrap.classList.add('is-revealing')"),
-  'only the actively opened group should opt into child reveal motion'
+  popupJs.includes('contentWrap.offsetHeight;') &&
+    popupJs.includes('requestAnimationFrame(() =>'),
+  'group expansion should keep the forced reflow and initial expanded replay hooks'
 );
-const groupRevealKeyframes = css.match(/@keyframes groupContentReveal\s*\{[\s\S]*?\n\}/)?.[0] || '';
-assert.ok(groupRevealKeyframes, 'active group expansion should have a named, scoped child reveal animation');
-assert.ok(!groupRevealKeyframes.includes('scale('), 'child reveal should not scale cards');
+const groupedEntryBlock = css.match(/\.domain-group-entries \.entry-card\s*\{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
-  /\.domain-group-content\.is-revealing \.domain-group-entries\s*\{[\s\S]*?animation:\s*groupContentReveal/.test(css),
-  'content reveal animation should only apply inside the active expanding group'
+  groupedEntryBlock &&
+    groupedEntryBlock.includes('opacity: 0') &&
+    groupedEntryBlock.includes('translateX(-35px) scale(0.9)') &&
+    groupedEntryBlock.includes('transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1)'),
+  'grouped cards should keep their staged left-side expand/collapse transform'
 );
 const toggleViewModeBlock = popupJs.match(/(?:async )?function toggleViewMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(toggleViewModeBlock, 'popup should keep a dedicated view-mode toggle function');
-assert.ok(!toggleViewModeBlock.includes('setTimeout'), 'view-mode switching should be immediate without animation wait timers');
-assert.ok(!toggleViewModeBlock.includes('mode-exit'), 'view-mode switching should not attach full-list exit animation classes');
-assert.ok(!toggleViewModeBlock.includes('mode-enter'), 'view-mode switching should not attach full-list enter animation classes');
-assert.ok(!popupJs.includes('isTransitioningMode'), 'view-mode switching should not lock the button behind a long transition state');
-assert.ok(!popupJs.includes('is-exiting'), 'view-mode switching should not mark every card as exiting');
-assert.ok(!popupJs.includes('is-transitioning'), 'view-mode switching should not mark every group as transitioning');
-assert.ok(!css.includes('body.mode-exit-'), 'CSS should not include full-list view-mode exit animations');
-assert.ok(!css.includes('body.mode-enter-'), 'CSS should not include full-list view-mode enter animations');
-assert.ok(!css.includes('cardEnterGrouped'), 'grouped view should not replay child-card enter animations after mode switching');
-assert.ok(!css.includes('containerFadeIn'), 'grouped view should not replay container enter animations after mode switching');
+assert.ok(toggleViewModeBlock.startsWith('async function'), 'view-mode switching should keep its async two-phase transition');
+assert.ok(toggleViewModeBlock.includes('state.isTransitioningMode'), 'view-mode switching should guard against overlapping transitions');
+assert.ok(toggleViewModeBlock.includes('mode-exit-grouped') && toggleViewModeBlock.includes('mode-exit-flat'), 'view-mode switching should attach exit animation classes');
+assert.ok(toggleViewModeBlock.includes('mode-enter-flat') && toggleViewModeBlock.includes('mode-enter-grouped'), 'view-mode switching should attach enter animation classes in both directions');
+assert.ok(toggleViewModeBlock.includes("card.classList.add('is-exiting')"), 'view-mode switching should mark cards for staggered exit');
+assert.ok(toggleViewModeBlock.includes("group.classList.add('is-transitioning')"), 'view-mode switching should mark grouped containers for exit');
+assert.ok(toggleViewModeBlock.includes('setTimeout(resolve, 600)') && toggleViewModeBlock.includes('setTimeout(resolve, 700)'), 'view-mode switching should keep the original exit/enter timing');
+assert.ok(css.includes('body.mode-exit-grouped') && css.includes('body.mode-exit-flat'), 'CSS should include full-list view-mode exit animations');
+assert.ok(css.includes('body.mode-enter-grouped') && css.includes('body.mode-enter-flat'), 'CSS should include full-list view-mode enter animations');
+assert.ok(css.includes('cardEnterGrouped') && css.includes('cardEnterFlat'), 'mode enter animations should keep both grouped and flat card keyframes');
+assert.ok(css.includes('containerFadeIn'), 'grouped mode enter should keep the container fade-in keyframe');
 const modeEnterFlatBlock = css.match(/body\.mode-enter-flat \.entry-card\s*\{[\s\S]*?\n\}/)?.[0] || '';
-assert.strictEqual(modeEnterFlatBlock, '', 'grouped-to-flat view switching should not attach a flat-card enter animation block');
-assert.ok(!css.includes('@keyframes cardEnterFlat'), 'flat list should not replay a card-enter animation after grouped-to-flat switching');
-assert.ok(!popupJs.includes("'mode-enter-flat'"), 'grouped-to-flat switching should render flat entries and stop without adding a post-render enter class');
+assert.ok(
+  modeEnterFlatBlock &&
+    modeEnterFlatBlock.includes('animation: cardEnterFlat') &&
+    modeEnterFlatBlock.includes('translateY(-20px) scale(0.92)'),
+  'grouped-to-flat view switching should keep the flat-card enter animation block'
+);
+assert.ok(
+  css.includes('.domain-group-entries .entry-card:nth-child(even)') &&
+    css.includes('translateX(35px) scale(0.9)') &&
+    css.includes('body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(even)'),
+  'group and mode enter animations should keep the alternating left/right choreography'
+);
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
 assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');
