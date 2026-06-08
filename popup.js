@@ -20,12 +20,13 @@ const state = {
   selectedIds: new Set(),
   pendingGroupSelectedIds: [],
   showCreateGroup: false,
-  viewMode: 'grouped', // 'grouped' or 'flat'
+  viewMode: 'flat', // 'grouped' or 'flat'
   isTransitioningMode: false
 };
 
 const els = {};
 let statusTimer = null;
+const pendingStorageEchoes = new Map();
 
 function byId(id) {
   return document.getElementById(id);
@@ -82,6 +83,85 @@ function chromeSet(values) {
   });
 }
 
+function storageFingerprint(value) {
+  try {
+    return JSON.stringify(value);
+  } catch (error) {
+    return String(value);
+  }
+}
+
+function trackStorageEchoes(values) {
+  Object.entries(values || {}).forEach(([key, value]) => {
+    const echoes = pendingStorageEchoes.get(key) || [];
+    echoes.push(storageFingerprint(value));
+    pendingStorageEchoes.set(key, echoes);
+  });
+}
+
+function clearTrackedStorageEchoes(values) {
+  Object.entries(values || {}).forEach(([key, value]) => {
+    const echoes = pendingStorageEchoes.get(key);
+    if (!echoes || echoes.length === 0) return;
+
+    const fingerprint = storageFingerprint(value);
+    const index = echoes.indexOf(fingerprint);
+    if (index >= 0) {
+      echoes.splice(index, 1);
+    }
+    if (echoes.length === 0) {
+      pendingStorageEchoes.delete(key);
+    }
+  });
+}
+
+async function setPopupStorage(values) {
+  trackStorageEchoes(values);
+  try {
+    await chromeSet(values);
+  } catch (error) {
+    clearTrackedStorageEchoes(values);
+    throw error;
+  }
+}
+
+function consumeStorageEcho(key, change) {
+  const echoes = pendingStorageEchoes.get(key);
+  if (!echoes || echoes.length === 0 || !change) {
+    return false;
+  }
+
+  const fingerprint = storageFingerprint(change.newValue);
+  const index = echoes.indexOf(fingerprint);
+  if (index < 0) {
+    return false;
+  }
+
+  echoes.splice(index, 1);
+  if (echoes.length === 0) {
+    pendingStorageEchoes.delete(key);
+  }
+  return true;
+}
+
+function shouldReloadFromStorageChange(changes, areaName) {
+  if (areaName !== 'local') return false;
+
+  let shouldReload = false;
+  [
+    storageKey,
+    customGroupsStorageKey,
+    expandedDomainsStorageKey,
+    viewModeStorageKey,
+    'openedDomainTabs'
+  ].forEach(key => {
+    if (changes[key] && !consumeStorageEcho(key, changes[key])) {
+      shouldReload = true;
+    }
+  });
+  return shouldReload;
+}
+
 function currentTab() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -113,7 +193,7 @@ async function loadEntries() {
     [storageKey]: [],
     openedDomainTabs: {},
     [expandedDomainsStorageKey]: [],
-    [viewModeStorageKey]: 'grouped',
+    [viewModeStorageKey]: 'flat',
     [customGroupsStorageKey]: []
   });
   const entries = Array.isArray(result[storageKey]) ? result[storageKey] : [];
@@ -137,25 +217,25 @@ async function loadEntries() {
 
 async function persist(entries) {
   state.entries = ReadLaterCore.sortEntriesForDisplay(entries);
-  await chromeSet({ [storageKey]: state.entries });
+  await setPopupStorage({ [storageKey]: state.entries });
   render();
 }
 
 async function persistOpenedTabs() {
   const openedTabsObj = Object.fromEntries(state.openedDomainTabs);
-  await chromeSet({ openedDomainTabs: openedTabsObj });
+  await setPopupStorage({ openedDomainTabs: openedTabsObj });
 }
 
 async function persistExpandedDomains() {
-  await chromeSet({ [expandedDomainsStorageKey]: Array.from(state.expandedDomains) });
+  await setPopupStorage({ [expandedDomainsStorageKey]: Array.from(state.expandedDomains) });
 }
 
 async function persistViewMode() {
-  await chromeSet({ [viewModeStorageKey]: state.viewMode });
+  await setPopupStorage({ [viewModeStorageKey]: state.viewMode });
 }
 
 async function persistCustomGroups() {
-  await chromeSet({ [customGroupsStorageKey]: state.customGroups });
+  await setPopupStorage({ [customGroupsStorageKey]: state.customGroups });
 }
 
 function enterSelectionMode() {
@@ -323,7 +403,7 @@ async function commitSelectionToGroup(targetDomain, options = {}) {
   state.expandedDomains.delete(groupName);
   state.entries = ReadLaterCore.sortEntriesForDisplay(updatedEntries);
 
-  await chromeSet({
+  await setPopupStorage({
     [storageKey]: state.entries,
     [customGroupsStorageKey]: state.customGroups,
     [expandedDomainsStorageKey]: Array.from(state.expandedDomains)
@@ -852,8 +932,10 @@ function renderDomainGroup(group) {
 
   const contentWrap = document.createElement('div');
   contentWrap.className = 'domain-group-content';
-  // Don't add is-expanded immediately to allow transition on first render
   const shouldExpand = isExpanded;
+  if (shouldExpand) {
+    contentWrap.classList.add('is-expanded');
+  }
 
   const toggleExpansion = () => {
     if (group.count === 0) return;
@@ -870,37 +952,27 @@ function renderDomainGroup(group) {
       persistExpandedDomains().catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
-
-      // Add collapsing class to trigger exit animation
-      contentWrap.classList.add('is-collapsing');
-
-      // Wait for cards to animate out (0.42s last card delay + 0.35s animation)
+      contentWrap.classList.remove('is-revealing');
+      contentWrap.classList.remove('is-expanded');
+      header.setAttribute('aria-expanded', 'false');
+      animateListReflow(previousPositions, { exclude: container });
       setTimeout(() => {
-        contentWrap.classList.remove('is-expanded');
-        contentWrap.classList.remove('is-collapsing');
-        header.setAttribute('aria-expanded', 'false');
-        animateListReflow(previousPositions, { exclude: container });
-
-        // Re-enable after container collapse
-        setTimeout(() => {
-          header.classList.remove('is-animating');
-        }, 300);
-      }, 770);
+        header.classList.remove('is-animating');
+      }, 300);
     } else {
       state.expandedDomains.add(group.domain);
       persistExpandedDomains().catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
       header.setAttribute('aria-expanded', 'true');
-      // Force reflow before adding class to trigger transition
-      contentWrap.offsetHeight;
       contentWrap.classList.add('is-expanded');
+      contentWrap.classList.add('is-revealing');
       animateListReflow(previousPositions, { exclude: container });
 
-      // Re-enable after expand completes (450ms container + 600ms last card)
       setTimeout(() => {
+        contentWrap.classList.remove('is-revealing');
         header.classList.remove('is-animating');
-      }, 1050);
+      }, 300);
     }
   };
 
@@ -931,15 +1003,6 @@ function renderDomainGroup(group) {
   contentWrap.appendChild(content);
   container.appendChild(header);
   container.appendChild(contentWrap);
-
-  // Trigger expand animation after DOM insertion if initially expanded
-  if (shouldExpand) {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        contentWrap.classList.add('is-expanded');
-      });
-    });
-  }
 
   // Drop zone for dragging entries to this group
   header.addEventListener('dragover', (e) => {
@@ -1273,14 +1336,7 @@ function init() {
 
   // Listen for storage changes from background script (e.g., Alt+1 shortcut)
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    const shouldReload = areaName === 'local' && (
-      changes[storageKey] ||
-      changes[customGroupsStorageKey] ||
-      changes[expandedDomainsStorageKey] ||
-      changes[viewModeStorageKey] ||
-      changes.openedDomainTabs
-    );
-    if (shouldReload) {
+    if (shouldReloadFromStorageChange(changes, areaName)) {
       loadEntries().catch((error) => {
         console.error('Failed to reload entries:', error);
       });

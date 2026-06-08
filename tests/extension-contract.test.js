@@ -340,10 +340,25 @@ assert.ok(!backgroundJs.includes('chrome.notifications.getAll'), 'notification c
 
 const storageChangedBlock = popupJs.match(/chrome\.storage\.onChanged\.addListener\(\(changes, areaName\) => \{[\s\S]*?\n  \}\);/)?.[0] || '';
 assert.ok(
-  storageChangedBlock.includes('changes[storageKey]') &&
-  storageChangedBlock.includes('changes[customGroupsStorageKey]') &&
-  storageChangedBlock.includes('changes[expandedDomainsStorageKey]') &&
-  storageChangedBlock.includes('changes[viewModeStorageKey]') &&
-  storageChangedBlock.includes('changes.openedDomainTabs'),
+  storageChangedBlock.includes('shouldReloadFromStorageChange(changes, areaName)'),
+  'popup storage listener should delegate reload decisions through the storage echo guard'
+);
+const shouldReloadBlock = popupJs.match(/function shouldReloadFromStorageChange\(changes, areaName\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  shouldReloadBlock.includes('let shouldReload = false;') &&
+  shouldReloadBlock.includes('forEach(key =>') &&
+  shouldReloadBlock.includes('if (changes[key] && !consumeStorageEcho(key, changes[key]))') &&
+  shouldReloadBlock.includes('return shouldReload;') &&
+  shouldReloadBlock.includes('storageKey') &&
+  shouldReloadBlock.includes('customGroupsStorageKey') &&
+  shouldReloadBlock.includes('expandedDomainsStorageKey') &&
+  shouldReloadBlock.includes('viewModeStorageKey') &&
+  shouldReloadBlock.includes("'openedDomainTabs'"),
   'popup should reload when entries, custom groups, expanded state, view mode, or opened-tab state change in storage'
+);
+assert.ok(
+  popupJs.includes('const pendingStorageEchoes = new Map();') &&
+  popupJs.includes('async function setPopupStorage') &&
+  popupJs.includes('function consumeStorageEcho'),
+  'popup-originated storage writes should be tracked so their onChanged echo does not reload the same popup'
 );

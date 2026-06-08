@@ -201,14 +201,15 @@ class TestDocument {
     this.body = new TestElement('body', this);
     this.activeElement = this.body;
     this.eventListeners = {};
+    this.elementsById = new Map();
   }
 
   createElement(tagName) {
     return new TestElement(tagName, this);
   }
 
-  getElementById() {
-    return null;
+  getElementById(id) {
+    return this.elementsById.get(id) || null;
   }
 
   addEventListener(type, listener) {
@@ -231,7 +232,10 @@ function instrumentPopup(source) {
       '  removeCustomGroup,',
       '  commitSelectionToGroup,',
       '  renderDomainGroup,',
-      '  render',
+      '  render,',
+      '  init,',
+      '  persistExpandedDomains,',
+      '  persistViewMode,',
       '};',
       "document.addEventListener('DOMContentLoaded', init);",
       '})();'
@@ -242,7 +246,9 @@ function instrumentPopup(source) {
 function createHarness() {
   const document = new TestDocument();
   const storage = {};
+  const getCalls = [];
   const setCalls = [];
+  const changeListeners = [];
   const context = {
     ReadLaterCore,
     chrome: {
@@ -250,6 +256,7 @@ function createHarness() {
       storage: {
         local: {
           get(keys, callback) {
+            getCalls.push(keys);
             const result = {};
             Object.entries(keys || {}).forEach(([key, fallback]) => {
               result[key] = Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : fallback;
@@ -258,12 +265,22 @@ function createHarness() {
           },
           set(values, callback) {
             setCalls.push(values);
+            const changes = {};
+            Object.entries(values || {}).forEach(([key, newValue]) => {
+              changes[key] = {
+                oldValue: storage[key],
+                newValue
+              };
+            });
             Object.assign(storage, values);
             callback();
+            changeListeners.forEach(listener => listener(changes, 'local'));
           }
         },
         onChanged: {
-          addListener() {}
+          addListener(listener) {
+            changeListeners.push(listener);
+          }
         }
       },
       tabs: {
@@ -299,21 +316,27 @@ function createHarness() {
 
   const api = context.__popupTest;
   const makeElement = tagName => document.createElement(tagName);
+  const elementById = (id, tagName = 'div') => {
+    const element = makeElement(tagName);
+    element.setAttribute('id', id);
+    document.elementsById.set(id, element);
+    return element;
+  };
   Object.assign(api.els, {
-    addCurrentPageBtn: makeElement('button'),
-    clearSearchBtn: makeElement('button'),
-    deleteSelectedBtn: makeElement('button'),
-    emptyActionBtn: makeElement('button'),
-    emptyCopy: makeElement('span'),
-    emptyState: makeElement('div'),
-    emptyTitle: makeElement('strong'),
-    entriesList: makeElement('div'),
-    searchInput: makeElement('input'),
-    statusText: makeElement('p'),
-    viewModeBtn: makeElement('button')
+    addCurrentPageBtn: elementById('addCurrentPageBtn', 'button'),
+    clearSearchBtn: elementById('clearSearchBtn', 'button'),
+    deleteSelectedBtn: elementById('deleteSelectedBtn', 'button'),
+    emptyActionBtn: elementById('emptyActionBtn', 'button'),
+    emptyCopy: elementById('emptyCopy', 'span'),
+    emptyState: elementById('emptyState', 'div'),
+    emptyTitle: elementById('emptyTitle', 'strong'),
+    entriesList: elementById('entriesList', 'div'),
+    searchInput: elementById('searchInput', 'input'),
+    statusText: elementById('statusText', 'p'),
+    viewModeBtn: elementById('viewModeBtn', 'button')
   });
 
-  return { api, document, setCalls, storage };
+  return { api, changeListeners, document, getCalls, setCalls, storage };
 }
 
 async function dispatchAndWait(element, event) {
@@ -416,6 +439,29 @@ async function main() {
     assert.strictEqual(api.state.expandedDomains.has('Empty'), false);
     assert.strictEqual(api.state.emptyGroupDeleteArmed.has('Empty'), false);
     assert.deepStrictEqual(Array.from(api.state.customGroups), []);
+  }
+
+  {
+    const { api, getCalls } = createHarness();
+
+    api.init();
+    await Promise.resolve();
+    await Promise.resolve();
+    getCalls.length = 0;
+
+    api.state.expandedDomains.add('Docs');
+    await api.persistExpandedDomains();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.strictEqual(getCalls.length, 0, 'popup-originated expanded-state writes should not reload and re-render the same popup');
+
+    api.state.viewMode = 'grouped';
+    await api.persistViewMode();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.strictEqual(getCalls.length, 0, 'popup-originated view-mode writes should not reload and re-render the same popup');
   }
 }
 

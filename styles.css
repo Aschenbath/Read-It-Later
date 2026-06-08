@@ -701,8 +701,7 @@ h1 {
   transition:
     border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .entry-card:hover .entry-open-button,
@@ -710,7 +709,6 @@ h1 {
   border-color: #c5dbd1;
   background: #ffffff;
   box-shadow: var(--shadow-soft);
-  transform: scale(1.005);
   outline: none;
 }
 
@@ -1322,156 +1320,45 @@ h1 {
 }
 
 .domain-group-content {
-  max-height: 0;
+  display: none;
   overflow: visible;
-  transition:
-    max-height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s;
   pointer-events: none;
 }
 
 .domain-group-content.is-expanded {
-  max-height: 2000px;
-  overflow: hidden;
-  transition:
-    max-height 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
+  display: block;
   pointer-events: auto;
 }
 
 .domain-group-entries {
   padding: 10px 0 0;
   position: relative;
+  animation: none;
 }
 
-.domain-group-content.is-expanded .domain-group-entries {
-  /* No need for extra transitions - cards handle their own animation */
+.domain-group-content.is-revealing .domain-group-entries {
+  animation: groupContentReveal 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes groupContentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .domain-group-entries .entry-card {
   margin: 0 0 8px;
   transform-origin: top center;
   animation: none;
-  opacity: 0;
-  transform: translateY(-16px) translateX(-35px) scale(0.9);
-  transition:
-    opacity 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.domain-group-entries .entry-card:nth-child(even) {
-  transform: translateY(-16px) translateX(35px) scale(0.9);
-}
-
-/* Same stagger delays for both expanding and collapsing (top to bottom) */
-.domain-group-entries .entry-card:nth-child(1) {
-  transition-delay: 0s;
-}
-
-.domain-group-entries .entry-card:nth-child(2) {
-  transition-delay: 0.06s;
-}
-
-.domain-group-entries .entry-card:nth-child(3) {
-  transition-delay: 0.12s;
-}
-
-.domain-group-entries .entry-card:nth-child(4) {
-  transition-delay: 0.18s;
-}
-
-.domain-group-entries .entry-card:nth-child(5) {
-  transition-delay: 0.24s;
-}
-
-.domain-group-entries .entry-card:nth-child(6) {
-  transition-delay: 0.3s;
-}
-
-.domain-group-entries .entry-card:nth-child(7) {
-  transition-delay: 0.36s;
-}
-
-.domain-group-entries .entry-card:nth-child(8) {
-  transition-delay: 0.42s;
-}
-
-/* When expanded, override with longer delays for entry */
-.domain-group-content.is-expanded .domain-group-entries .entry-card {
   opacity: 1;
-  transform: translateY(0) translateX(0) scale(1);
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(1) {
-  transition-delay: 0.12s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(2) {
-  transition-delay: 0.24s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(3) {
-  transition-delay: 0.36s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
-  transition-delay: 0.48s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(5) {
-  transition-delay: 0.6s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(6) {
-  transition-delay: 0.72s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(7) {
-  transition-delay: 0.84s;
-}
-
-.domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(8) {
-  transition-delay: 0.96s;
-}
-
-/* When collapsing, use same delays as base state for smooth exit */
-.domain-group-content.is-collapsing .domain-group-entries .entry-card {
-  opacity: 0;
-  transform: translateY(-16px) translateX(-35px) scale(0.9);
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(even) {
-  transform: translateY(-16px) translateX(35px) scale(0.9);
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(1) {
-  transition-delay: 0s;
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(2) {
-  transition-delay: 0.06s;
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(3) {
-  transition-delay: 0.12s;
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(4) {
-  transition-delay: 0.18s;
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(5) {
-  transition-delay: 0.24s;
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(6) {
-  transition-delay: 0.3s;
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(7) {
-  transition-delay: 0.36s;
-}
-
-.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(8) {
-  transition-delay: 0.42s;
+  transform: none;
+  transition: none;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
