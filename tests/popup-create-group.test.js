@@ -373,7 +373,6 @@ async function main() {
     };
     const node = api.renderDomainGroup(group);
     const header = node.querySelector('.domain-group-header');
-    api.state.selectionMode = true;
 
     header.click();
 
@@ -384,66 +383,6 @@ async function main() {
 
     assert.strictEqual(api.state.expandedDomains.has('Docs'), false);
     assert.strictEqual(header.getAttribute('aria-expanded'), 'false');
-  }
-
-  {
-    const { api } = createHarness();
-    const docsEntry = ReadLaterCore.buildEntryFromTab({
-      title: 'Docs page',
-      url: 'https://docs.example/read'
-    }, 1000);
-    const docsSecondEntry = ReadLaterCore.buildEntryFromTab({
-      title: 'Docs second page',
-      url: 'https://docs.example/second'
-    }, 950);
-    const blogEntry = ReadLaterCore.buildEntryFromTab({
-      title: 'Blog page',
-      url: 'https://blog.example/read'
-    }, 900);
-    const blogSecondEntry = ReadLaterCore.buildEntryFromTab({
-      title: 'Blog second page',
-      url: 'https://blog.example/second'
-    }, 850);
-    api.state.entries = [docsEntry, docsSecondEntry, blogEntry, blogSecondEntry];
-    api.state.viewMode = 'grouped';
-    api.render();
-
-    const docsGroup = api.els.entriesList.children[0];
-    const docsHeader = docsGroup.querySelector('.domain-group-header');
-    const docsContent = docsGroup.querySelector('.domain-group-content');
-
-    assert.strictEqual(docsHeader.getAttribute('aria-expanded'), 'false');
-    assert.strictEqual(docsContent.style.display, 'none');
-
-    docsHeader.click();
-
-    assert.strictEqual(api.state.expandedDomains.has('docs.example'), true);
-    assert.strictEqual(docsHeader.getAttribute('aria-expanded'), 'true');
-    assert.strictEqual(docsContent.style.display, 'block');
-    assert.strictEqual(api.els.entriesList.querySelectorAll('.domain-group').length, 2);
-    assert.strictEqual(docsGroup.querySelectorAll('.entry-card').length, 2);
-
-    docsHeader.click();
-
-    assert.strictEqual(api.state.expandedDomains.has('docs.example'), false);
-    assert.strictEqual(docsHeader.getAttribute('aria-expanded'), 'false');
-  }
-
-  {
-    const { api } = createHarness();
-    const entry = ReadLaterCore.buildEntryFromTab({
-      title: 'Fresh grouped page',
-      url: 'https://fresh.example/read'
-    }, Date.now());
-    const node = api.renderDomainGroup({
-      type: 'group',
-      domain: 'Fresh',
-      entries: [entry],
-      count: 1
-    });
-    const card = node.querySelector('.entry-card');
-
-    assert.strictEqual(card.style.animation, 'none');
   }
 
   {

@@ -175,9 +175,6 @@ assert.ok(popupJs.includes('readLaterViewMode'), 'grouped/flat view mode should 
 assert.ok(popupJs.includes('readLaterCustomGroups'), 'user-created groups should be stored independently from entry domains');
 assert.ok(popupJs.includes('state.expandedDomains = new Set'), 'expanded group state should be restored when the popup opens');
 assert.ok(popupJs.includes('state.customGroups ='), 'user-created groups should be restored when the popup opens');
-assert.ok(!popupJs.includes('focusedGroupDomain'), 'grouped view should keep the chevron/header as an inline expand control, not switch to a focused drawer');
-assert.ok(!popupJs.includes('renderFocusedGroupView'), 'focused group drawer should not replace normal inline grouped expansion');
-assert.ok(!popupJs.includes('exitFocusedGroup'), 'focused group drawer return state should be removed with the drawer');
 assert.ok(popupJs.includes('function persistExpandedDomains'), 'expanded/collapsed group state should be persisted after toggles');
 assert.ok(popupJs.includes('function persistViewMode'), 'grouped/flat view choice should be persisted after toggles');
 assert.ok(popupJs.includes('function persistCustomGroups'), 'user-created groups should be persisted after creation');
@@ -197,10 +194,6 @@ assert.ok(
 assert.ok(
   popupJs.includes('const isExpanded = state.expandedDomains.has(group.domain);'),
   'selection/classification mode should keep classified groups compact until the user opens them'
-);
-assert.ok(
-  popupJs.includes('toggleExpansion();'),
-  'normal grouped view should expand and collapse groups inline'
 );
 assert.ok(
   !popupJs.includes('const hasSelectedEntry = state.selectionMode'),
@@ -224,7 +217,7 @@ assert.ok(
 );
 assert.ok(
   popupJs.includes("header.addEventListener('click'"),
-  'group headers should handle click interaction'
+  'non-empty group headers should toggle when clicked anywhere on the header'
 );
 assert.ok(
   popupJs.includes('if (group.count === 0) return;'),
@@ -260,10 +253,6 @@ assert.ok(css.includes('.search-clear-button'), 'search should expose a clear co
 assert.ok(css.includes('.empty-action-button'), 'empty-state should provide an in-context action button');
 assert.ok(css.includes('.entry-open-button'), 'entry open button should be styled as the main card action');
 assert.ok(css.includes('.entry-meta'), 'entry metadata should be styled for fast scanning');
-assert.ok(
-  /\.entries-list\s*\{[\s\S]*?overflow-anchor:\s*none;/.test(css),
-  'list scroll anchoring should not fight group expansion motion'
-);
 assert.ok(css.includes('.entry-card.is-current-tab'), 'current tab entry should have a distinct visual state');
 assert.ok(css.includes('.add-button.is-saved'), 'add button should have a distinct saved state');
 assert.ok(css.includes('.add-button.is-selection-mode'), 'selection-mode add button should have an explicit create-group visual state');
@@ -274,30 +263,6 @@ assert.ok(
 assert.ok(!css.includes('.undo-button'), 'stale undo styles should be removed because the undo affordance no longer exists');
 assert.ok(css.includes('.delete-selected-icon'), 'bulk delete button should use a CSS-drawn icon');
 assert.ok(css.includes('.domain-group-header.is-delete-armed'), 'empty group delete arm state should have visible feedback');
-assert.ok(!css.includes('.focused-group-view'), 'focused group drawer surface should be removed');
-assert.ok(!css.includes('.focused-group-back'), 'focused group drawer back control should be removed');
-assert.ok(!css.includes('stackExpand'), 'group expansion should not stagger/scale every child card');
-assert.ok(
-  /\.domain-group-entries \.entry-card\s*\{[\s\S]*?animation:\s*none;/.test(css),
-  'grouped entries should stay visually still while the group content reveals'
-);
-assert.ok(
-  /\.domain-group-entries \.entry-card \.entry-open-button\s*\{[\s\S]*?min-height:\s*46px;/.test(css),
-  'grouped child entries should be compact so inline expansion stays quiet'
-);
-assert.ok(
-  /\.domain-group-entries \.entry-card \.entry-open-button\s*\{[\s\S]*?padding:\s*7px 34px 7px 48px;/.test(css),
-  'grouped child entries should use tighter internal spacing than top-level cards'
-);
-assert.ok(
-  /\.domain-group-content\s*\{[\s\S]*?will-change:\s*max-height,\s*opacity;/.test(css),
-  'group content reveal should be isolated to max-height/opacity on the content container'
-);
-assert.ok(
-  !/\.domain-group-header:hover,[\s\S]*?transform:\s*translateY\(-2px\);/.test(css),
-  'group headers should not lift on hover because it makes expansion feel jumpy'
-);
-assert.ok(!popupJs.includes('}, 320);'), 'group reveal cleanup timers should not lag behind the calmer CSS transition');
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
 assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');

@@ -769,7 +769,7 @@ function renderDomainGroup(group) {
       });
       setTimeout(() => {
         contentWrap.style.display = 'none';
-      }, 240);
+      }, 320);
     } else {
       state.expandedDomains.add(group.domain);
       persistExpandedDomains().catch((error) => {
@@ -785,7 +785,7 @@ function renderDomainGroup(group) {
       });
       setTimeout(() => {
         contentWrap.style.maxHeight = 'none';
-      }, 240);
+      }, 320);
     }
   };
 
@@ -808,9 +808,9 @@ function renderDomainGroup(group) {
 
   const content = document.createElement('div');
   content.className = 'domain-group-entries';
-  group.entries.forEach((entry) => {
+  group.entries.forEach((entry, index) => {
     const card = renderEntry(entry);
-    card.style.animation = 'none';
+    card.style.setProperty('--stack-index', index);
     content.appendChild(card);
   });
 
