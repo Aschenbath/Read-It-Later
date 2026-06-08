@@ -473,7 +473,6 @@ h1 {
   margin: 0 0 8px;
   position: relative;
   display: block;
-  animation: entryIn 0.26s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .entry-card::before {
@@ -1327,7 +1326,7 @@ h1 {
 
 .domain-group-content {
   max-height: 0;
-  overflow: visible;
+  overflow: hidden;
   transition:
     max-height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s;
   pointer-events: none;
@@ -1609,14 +1608,15 @@ body.mode-enter-grouped .domain-group {
   }
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card {
   --mode-enter-x: -35px;
   opacity: 0;
   transform: translateY(-16px) translateX(var(--mode-enter-x)) scale(0.9);
+  transition: none;
   animation: cardEnterGrouped 0.35s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(even) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(even) {
   --mode-enter-x: 35px;
   transform: translateY(-16px) translateX(var(--mode-enter-x)) scale(0.9);
 }
@@ -1632,47 +1632,35 @@ body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(even) {
   }
 }
 
-body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card {
-  opacity: 0;
-  transform: translateY(-16px) translateX(var(--mode-enter-x, -35px)) scale(0.9);
-  transition: none;
-  animation-fill-mode: both;
-}
-
-body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(even) {
-  --mode-enter-x: 35px;
-  transform: translateY(-16px) translateX(var(--mode-enter-x)) scale(0.9);
-}
-
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(1) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(1) {
   animation-delay: 0.1s;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(2) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(2) {
   animation-delay: 0.18s;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(3) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(3) {
   animation-delay: 0.26s;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(4) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(4) {
   animation-delay: 0.34s;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(5) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(5) {
   animation-delay: 0.42s;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(6) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(6) {
   animation-delay: 0.5s;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(7) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(7) {
   animation-delay: 0.58s;
 }
 
-body.mode-enter-grouped .domain-group-entries .entry-card:nth-child(8) {
+body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card:nth-child(8) {
   animation-delay: 0.66s;
 }
 
@@ -1743,7 +1731,7 @@ body.mode-enter-flat .entry-card:nth-child(8) {
   body.mode-exit-grouped .domain-group-entries .entry-card,
   body.mode-exit-flat .entry-card,
   body.mode-enter-grouped .domain-group,
-  body.mode-enter-grouped .domain-group-entries .entry-card,
+  body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card,
   body.mode-enter-flat .entry-card {
     transition: none !important;
   }

@@ -330,6 +330,21 @@ assert.ok(
     groupedEntryBlock.includes('transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1)'),
   'grouped cards should keep their staged left-side expand/collapse transform'
 );
+const entryCardBlock = css.match(/\.entry-card\s*\{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  entryCardBlock && !/animation:\s*entryIn/.test(entryCardBlock),
+  'entry cards should not replay default entryIn after mode-enter classes are removed'
+);
+assert.ok(
+  popupJs.includes("!state.isTransitioningMode && entryAge < 2000") &&
+    popupJs.includes("item.style.animation = 'entryIn"),
+  'fresh-entry animation should stay opt-in through renderEntry and be suppressed during mode switches'
+);
+const domainContentBlock = css.match(/\.domain-group-content\s*\{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  domainContentBlock && domainContentBlock.includes('overflow: hidden'),
+  'collapsed group content should clip child cards so grouped mode-enter cannot visually expose collapsed groups'
+);
 const toggleViewModeBlock = popupJs.match(/(?:async )?function toggleViewMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(toggleViewModeBlock, 'popup should keep a dedicated view-mode toggle function');
 assert.ok(toggleViewModeBlock.startsWith('async function'), 'view-mode switching should keep its async two-phase transition');
@@ -355,18 +370,22 @@ assert.ok(
 );
 assert.ok(
   /body\.mode-enter-flat \.entry-card/.test(css) &&
-    /body\.mode-enter-grouped \.domain-group-entries \.entry-card/.test(css) &&
+    /body\.mode-enter-grouped \.domain-group-content\.is-expanded \.domain-group-entries \.entry-card/.test(css) &&
     /body\.mode-exit-flat \.entry-card/.test(css) &&
     /body\.mode-exit-grouped \.domain-group-entries \.entry-card/.test(css),
   'mode switching should target the same individual cards as the established choreography'
+);
+assert.ok(
+  !/body\.mode-enter-grouped\s+\.domain-group-entries\s+\.entry-card/.test(css),
+  'grouped mode-enter should not animate cards from collapsed groups'
 );
 assert.ok(
   css.includes('body.mode-enter-grouped .domain-group-content.is-expanded .domain-group-entries .entry-card'),
   'mode-enter grouped cards should override already-expanded group-card transition state'
 );
 assert.ok(
-  /body\.mode-enter-grouped \.domain-group-content\.is-expanded \.domain-group-entries \.entry-card\s*\{[\s\S]*?transition:\s*none;[\s\S]*?animation-fill-mode:\s*both;/.test(css),
-  'mode-enter grouped cards should use the mode animation fill, not the local expand transition'
+  /body\.mode-enter-grouped \.domain-group-content\.is-expanded \.domain-group-entries \.entry-card\s*\{[\s\S]*?transition:\s*none;[\s\S]*?animation:\s*cardEnterGrouped[\s\S]*?\sboth;/.test(css),
+  'mode-enter grouped cards should use the mode animation, not local expand transition state'
 );
 assert.ok(
   /body\.mode-enter-flat \.entry-card\s*\{[\s\S]*?animation:\s*cardEnterFlat[\s\S]*?\sboth;/.test(css),
