@@ -91,7 +91,7 @@ h1 {
   display: grid;
   place-items: center;
   border: 1px solid #1c2f2a;
-  border-radius: 11px;
+  border-radius: 12px;
   background: var(--accent);
   color: var(--accent-ink);
   cursor: pointer;
@@ -111,7 +111,8 @@ h1 {
 }
 
 .add-button:active {
-  transform: translateY(1px);
+  transform: translateY(2px) scale(0.96);
+  box-shadow: 0 4px 10px rgba(79, 155, 133, 0.24);
 }
 
 .add-button:disabled {
@@ -410,7 +411,7 @@ h1 {
   position: relative;
   height: 451px;
   overflow: hidden;
-  border-radius: 13px;
+  border-radius: 12px;
 }
 
 .entries-list {
@@ -496,6 +497,10 @@ h1 {
   cursor: move;
   transform: rotate(2deg) scale(0.98);
   box-shadow: 0 8px 24px rgba(79, 155, 133, 0.35);
+  transition:
+    transform 0.18s cubic-bezier(0.68, -0.55, 0.27, 1.55),
+    opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .selection-mode .entry-card {
@@ -712,7 +717,7 @@ h1 {
   display: grid;
   place-items: center;
   border: 1px solid #d2cec1;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fffdf8;
   overflow: hidden;
 }
@@ -843,10 +848,12 @@ h1 {
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
+  will-change: opacity;
   transition:
     background 0.18s cubic-bezier(0.4, 0, 0.2, 1),
     color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .entry-card:hover .delete-button,
@@ -860,6 +867,10 @@ h1 {
   background: #f0e7e3;
   color: var(--danger);
   outline: none;
+}
+
+.delete-button:active {
+  transform: scale(0.92);
 }
 
 .delete-icon {
@@ -898,7 +909,7 @@ h1 {
   align-content: center;
   gap: 10px;
   border: 1px dashed #cfc8b8;
-  border-radius: 13px;
+  border-radius: 12px;
   background:
     linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(244, 241, 231, 0.78)),
     var(--surface);
@@ -913,7 +924,7 @@ h1 {
   display: block;
   margin-bottom: 2px;
   border: 2px solid #2b3438;
-  border-radius: 10px 10px 12px 12px;
+  border-radius: 12px;
   background: #fffdf8;
   box-shadow: 7px 8px 0 rgba(79, 155, 133, 0.16);
 }
@@ -960,7 +971,7 @@ h1 {
   margin-top: 4px;
   padding: 0 15px;
   border: 1px solid #23352f;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #2f3b38;
   color: #fffdf8;
   cursor: pointer;
