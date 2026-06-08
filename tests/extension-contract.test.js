@@ -257,12 +257,38 @@ assert.ok(css.includes('.entry-card.is-current-tab'), 'current tab entry should 
 assert.ok(css.includes('.add-button.is-saved'), 'add button should have a distinct saved state');
 assert.ok(css.includes('.add-button.is-selection-mode'), 'selection-mode add button should have an explicit create-group visual state');
 assert.ok(
+  /\.entries-list\s*\{[\s\S]*?overflow-anchor:\s*none;/.test(css),
+  'list scroll anchoring should not pull stable groups when another group expands'
+);
+assert.ok(
   !/\.add-button\.is-selection-mode \.add-icon\s*\{\s*opacity:\s*0\.5;/.test(css),
   'selection-mode add button should not look disabled'
 );
 assert.ok(!css.includes('.undo-button'), 'stale undo styles should be removed because the undo affordance no longer exists');
 assert.ok(css.includes('.delete-selected-icon'), 'bulk delete button should use a CSS-drawn icon');
 assert.ok(css.includes('.domain-group-header.is-delete-armed'), 'empty group delete arm state should have visible feedback');
+assert.ok(!css.includes('transition: all'), 'popup motion should transition explicit properties instead of animating every property');
+const entryHoverBlock = css.match(/\.entry-card:hover \.entry-open-button,[\s\S]*?\n\}/)?.[0] || '';
+const groupHeaderHoverBlock = css.match(/\.domain-group-header:hover,[\s\S]*?\n\}/)?.[0] || '';
+const selectionGroupHoverBlock = css.match(/\.selection-mode \.domain-group-header:hover,[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  entryHoverBlock && !entryHoverBlock.includes('transform:'),
+  'hovering a saved page should not lift, scale, or move the card'
+);
+assert.ok(
+  groupHeaderHoverBlock && !groupHeaderHoverBlock.includes('transform:'),
+  'hovering a group header should not lift, scale, or move the group'
+);
+assert.ok(
+  selectionGroupHoverBlock && !selectionGroupHoverBlock.includes('transform:'),
+  'selection-mode group hover/drop feedback should not scale the group'
+);
+assert.ok(!css.includes('stackExpand'), 'group expansion should not stagger/scale every child card');
+assert.ok(!popupJs.includes('--stack-index'), 'group rendering should not assign child-card stagger animation indexes');
+assert.ok(
+  /\.domain-group-entries \.entry-card\s*\{[\s\S]*?animation:\s*none;/.test(css),
+  'grouped entries should stay visually still while only the group content panel reveals'
+);
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
 assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');
