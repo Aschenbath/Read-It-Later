@@ -207,9 +207,17 @@ function groupEntriesByDomain(entries) {
 
   const groups = [];
   for (const [domain, items] of byDomain) {
-    if (items.length === 1) {
+    // Check if this domain is a real extracted domain or a user-created group name
+    const isRealDomain = items.some(entry => {
+      const extractedDomain = domainFromUrl(entry.url);
+      return extractedDomain === domain;
+    });
+
+    if (items.length === 1 && isRealDomain) {
+      // Single entry with real domain: show as single item
       groups.push({ type: 'single', entry: items[0] });
     } else {
+      // Multiple entries, or user-created group: show as group
       groups.push({ type: 'group', domain, entries: items, count: items.length });
     }
   }
