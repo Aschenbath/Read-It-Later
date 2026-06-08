@@ -114,6 +114,10 @@ function toggleSelection(entryId) {
   } else {
     state.selectedIds.add(entryId);
   }
+  if (state.selectionMode && state.selectedIds.size === 0) {
+    exitSelectionMode();
+    return;
+  }
   render();
 }
 
@@ -255,24 +259,6 @@ function openEntry(entry) {
   }
 }
 
-async function markAsRead(entry) {
-  if (!entry || entry.isRead) return;
-
-  const updatedEntries = state.entries.map(e =>
-    e.id === entry.id ? { ...e, isRead: true } : e
-  );
-  await persist(updatedEntries);
-}
-
-async function toggleReadStatus(entry) {
-  if (!entry) return;
-
-  const updatedEntries = state.entries.map(e =>
-    e.id === entry.id ? { ...e, isRead: !e.isRead } : e
-  );
-  await persist(updatedEntries);
-}
-
 async function removeEntry(entry) {
   const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
   if (!next.changed) return;
@@ -310,7 +296,6 @@ function renderEntry(entry) {
   item.dataset.id = entry.id;
   item.setAttribute('role', 'listitem');
   item.classList.toggle('is-current-tab', !!state.currentTabEntry && state.currentTabEntry.id === entry.id);
-  item.classList.toggle('is-read', !!entry.isRead);
   item.classList.toggle('is-selected', state.selectedIds.has(entry.id));
 
   // Add entrance animation for newly added entries (within last 2 seconds)
@@ -405,14 +390,6 @@ function renderEntry(entry) {
       toggleSelection(entry.id);
     } else if (!touchMoved) {
       openEntry(entry);
-      markAsRead(entry);
-    }
-  });
-
-  openButton.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    if (!state.selectionMode) {
-      toggleReadStatus(entry);
     }
   });
 
@@ -984,7 +961,6 @@ function bind() {
       if (entry && document.activeElement !== els.searchInput) {
         event.preventDefault();
         openEntry(entry);
-        markAsRead(entry);
       }
     }
   });

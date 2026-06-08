@@ -67,6 +67,11 @@ assert.ok(!popupJs.includes('innerHTML = entry.domain'));
 assert.ok(popupJs.includes('function renderEmptyState'), 'popup should render an empty-state that changes for empty list vs no matches');
 assert.ok(popupJs.includes("els.emptyActionBtn.dataset.action = hasNoMatches ? 'clear' : 'add'"), 'empty-state action should clear only for no-match searches');
 assert.ok(popupJs.includes("els.clearSearchBtn.addEventListener('click'"), 'search should have a one-click clear control');
+assert.ok(
+  popupJs.includes('if (state.selectionMode && state.selectedIds.size === 0)') &&
+  popupJs.includes('exitSelectionMode();'),
+  'deselecting the last selected entry should leave selection mode without a second click'
+);
 assert.ok(popupJs.includes("event.key === 'Escape'"), 'Escape should clear an active search quickly');
 assert.ok(popupJs.includes("event.key.toLowerCase() === 'k'"), 'Ctrl/Command+K should focus search');
 assert.ok(popupJs.includes('ReadLaterCore.formatSavedAt'), 'entries should show relative saved time for scanning');
@@ -82,6 +87,9 @@ assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
+assert.ok(!popupJs.includes('markAsRead'), 'opening an entry should not maintain read/unread state');
+assert.ok(!popupJs.includes('toggleReadStatus'), 'popup should not expose read/unread toggling');
+assert.ok(!popupJs.includes('is-read'), 'entry rendering should not apply read/unread classes');
 assert.ok(!popupJs.includes('`${state.entries.length} saved`'), 'idle footer should not show a passive saved count');
 assert.ok(!popupJs.includes("const card = document.createElement('button')"), 'entry card should not be a button containing another button');
 
@@ -106,6 +114,8 @@ assert.ok(css.includes('.add-button.is-saved'), 'add button should have a distin
 assert.ok(css.includes('.undo-button'), 'undo affordance should be styled');
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
+assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');
+assert.ok(!css.includes('Unread indicator'), 'CSS should not keep a read/unread indicator');
 
 const icon = read('icons/icon.svg');
 assert.ok(icon.includes('bookshelf-stack'), 'icon should read as a compact bookshelf');

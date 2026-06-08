@@ -399,7 +399,6 @@ h1 {
   animation: entryIn 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* Unread indicator: left accent stripe */
 .entry-card::before {
   content: "";
   position: absolute;
@@ -409,12 +408,8 @@ h1 {
   width: 3px;
   border-radius: 0 2px 2px 0;
   background: var(--accent);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.entry-card:not(.is-read)::before {
   opacity: 1;
+  transition: opacity 0.2s ease;
 }
 
 @keyframes entryIn {
