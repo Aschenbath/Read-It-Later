@@ -1256,23 +1256,36 @@ h1 {
 }
 
 .domain-group-content {
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
-  contain: paint;
+  transition: grid-template-rows 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.domain-group-content.is-expanded {
+  grid-template-rows: 1fr;
 }
 
 .domain-group-entries {
   padding: 10px 0 0;
   position: relative;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.domain-group-content.is-expanded .domain-group-entries {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .domain-group-entries .entry-card {
   margin: 0 0 8px;
   transform-origin: top center;
   animation: none;
-}
-
-.domain-group-content.is-revealing .domain-group-entries {
-  animation: groupContentReveal 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .domain-group-entries .entry-card .entry-open-button {
@@ -1289,17 +1302,6 @@ h1 {
     0 3px 8px rgba(52, 48, 39, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     inset 0 -1px 0 rgba(79, 155, 133, 0.08);
-}
-
-@keyframes groupContentReveal {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 @media (max-width: 420px) {

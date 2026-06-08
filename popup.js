@@ -791,8 +791,8 @@ function renderDomainGroup(group) {
 
   const contentWrap = document.createElement('div');
   contentWrap.className = 'domain-group-content';
-  if (!isExpanded) {
-    contentWrap.style.display = 'none';
+  if (isExpanded) {
+    contentWrap.classList.add('is-expanded');
   }
 
   const toggleExpansion = () => {
@@ -806,9 +806,8 @@ function renderDomainGroup(group) {
       persistExpandedDomains().catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
-      contentWrap.classList.remove('is-revealing');
+      contentWrap.classList.remove('is-expanded');
       header.setAttribute('aria-expanded', 'false');
-      contentWrap.style.display = 'none';
       animateListReflow(previousPositions, { exclude: container });
     } else {
       state.expandedDomains.add(group.domain);
@@ -816,12 +815,8 @@ function renderDomainGroup(group) {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
       header.setAttribute('aria-expanded', 'true');
-      contentWrap.style.display = 'block';
-      contentWrap.classList.add('is-revealing');
+      contentWrap.classList.add('is-expanded');
       animateListReflow(previousPositions, { exclude: container });
-      setTimeout(() => {
-        contentWrap.classList.remove('is-revealing');
-      }, 280);
     }
   };
 
