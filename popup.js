@@ -199,7 +199,7 @@ async function deleteSelectedEntries() {
   document.body.classList.remove('selection-mode');
 }
 
-async function mergeSelectionToGroup(targetDomain) {
+async function mergeSelectionToGroup(targetDomain, options = {}) {
   if (state.selectedIds.size === 0) return;
 
   // Update domain for selected entries
@@ -219,8 +219,15 @@ async function mergeSelectionToGroup(targetDomain) {
     setStatus(error && error.message ? error.message : 'Could not save group state');
   });
 
-  // Hide the create-group input, but keep the selected entries selected so classification can continue.
+  // Hide the create-group input
   state.showCreateGroup = false;
+
+  // Clear selection before persist if requested (for atomic exit)
+  if (options.clearSelection) {
+    state.selectionMode = false;
+    state.selectedIds.clear();
+    document.body.classList.remove('selection-mode');
+  }
 
   // Persist will call render() with the updated state
   await persist(updatedEntries);
@@ -534,8 +541,8 @@ function renderCreateGroupItem() {
             state.customGroups = [...state.customGroups, targetDomain];
             await persistCustomGroups();
           }
-          await mergeSelectionToGroup(targetDomain);
-          exitSelectionMode();
+          // Merge and clear selection atomically
+          await mergeSelectionToGroup(targetDomain, { clearSelection: true });
         } else {
           // No selection: just create empty group as drop target
           await createCustomGroup(groupName);
