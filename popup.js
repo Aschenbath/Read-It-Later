@@ -864,14 +864,22 @@ function renderDomainGroup(group) {
       persistExpandedDomains().catch((error) => {
         setStatus(error && error.message ? error.message : 'Could not save group state');
       });
-      contentWrap.classList.remove('is-expanded');
-      header.setAttribute('aria-expanded', 'false');
-      animateListReflow(previousPositions, { exclude: container });
 
-      // Re-enable after collapse completes (450ms)
+      // Add collapsing class to trigger exit animation
+      contentWrap.classList.add('is-collapsing');
+
+      // Wait for cards to animate out (0.42s last card delay + 0.35s animation)
       setTimeout(() => {
-        header.classList.remove('is-animating');
-      }, 450);
+        contentWrap.classList.remove('is-expanded');
+        contentWrap.classList.remove('is-collapsing');
+        header.setAttribute('aria-expanded', 'false');
+        animateListReflow(previousPositions, { exclude: container });
+
+        // Re-enable after container collapse
+        setTimeout(() => {
+          header.classList.remove('is-animating');
+        }, 300);
+      }, 770);
     } else {
       state.expandedDomains.add(group.domain);
       persistExpandedDomains().catch((error) => {
