@@ -461,17 +461,12 @@ function renderEntry(entry) {
     title.title = entry.title;
   }
 
-  const domain = document.createElement('span');
-  domain.className = 'entry-domain';
-  domain.textContent = entry.domain || entry.url;
-
   const savedAt = document.createElement('span');
   savedAt.className = 'entry-saved-at';
   savedAt.textContent = ReadLaterCore.formatSavedAt(entry.updatedAt || entry.createdAt);
 
   const meta = document.createElement('span');
   meta.className = 'entry-meta';
-  meta.appendChild(domain);
   meta.appendChild(savedAt);
 
   const del = document.createElement('button');
