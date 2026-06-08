@@ -130,12 +130,12 @@ async function mergeSelectionToGroup(targetDomain) {
   // Expand the newly created/updated group BEFORE persisting
   state.expandedDomains.add(targetDomain);
 
-  await persist(updatedEntries);
-
-  // Stay in selection mode but clear selection and hide create group input
+  // Clear selection and hide create group input BEFORE persist
   state.selectedIds.clear();
   state.showCreateGroup = false;
-  render();
+
+  // Persist will call render() with the updated state
+  await persist(updatedEntries);
 }
 
 async function createGroupFromSelection() {
