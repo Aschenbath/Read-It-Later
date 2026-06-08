@@ -499,10 +499,16 @@ function makeIcon(entry = {}) {
   return wrap;
 }
 
-function openEntry(entry) {
-  if (entry && entry.url) {
-    chrome.tabs.create({ url: entry.url });
+async function openEntry(entry) {
+  if (!entry || !entry.url) {
+    return false;
   }
+  await chrome.tabs.create({ url: entry.url });
+  return true;
+}
+
+function reportOpenEntryError(error) {
+  setStatus(error && error.message ? error.message : 'Could not open page', { autoClear: false });
 }
 
 function setEmptyGroupChevronLabel(chevron, domain, isConfirming) {
@@ -716,7 +722,7 @@ function renderEntry(entry) {
       e.preventDefault();
       toggleSelection(entry.id);
     } else if (!touchMoved) {
-      openEntry(entry);
+      return openEntry(entry).catch(reportOpenEntryError);
     }
   });
 
@@ -1466,7 +1472,7 @@ function bind() {
       const entry = focusedEntry();
       if (entry && document.activeElement !== els.searchInput) {
         event.preventDefault();
-        openEntry(entry);
+        return openEntry(entry).catch(reportOpenEntryError);
       }
     }
   });

@@ -151,6 +151,12 @@ assert.ok(
   'keyboard Enter/Delete should resolve the focused entry by its DOM entry id, not by a flat visibleEntries index'
 );
 assert.ok(
+  popupJs.includes('async function openEntry') &&
+    popupJs.includes('function reportOpenEntryError') &&
+    popupJs.includes('return openEntry(entry).catch(reportOpenEntryError);'),
+  'single-entry open actions should await tab creation failures and surface them instead of fire-and-forget'
+);
+assert.ok(
   !popupJs.includes('return index >= 0 ? state.visibleEntries[index] : null;'),
   'grouped-view keyboard actions must not map focused DOM index to flat visibleEntries order'
 );

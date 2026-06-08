@@ -646,6 +646,24 @@ async function main() {
   }
 
   {
+    const { api } = createHarness({
+      createResults: [new Error('Cannot open saved page')]
+    });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Open failure',
+      url: 'https://docs.example/fail-open'
+    }, 1000);
+    api.state.entries = [entry];
+    api.render();
+    const button = api.els.entriesList.querySelector('.entry-open-button');
+
+    await dispatchAndWait(button, { type: 'click', target: button });
+    await Promise.resolve();
+
+    assert.strictEqual(api.els.statusText.textContent, 'Cannot open saved page');
+  }
+
+  {
     const { api } = createHarness();
     api.state.customGroups = ['Empty'];
     const emptyNode = api.renderDomainGroup({
