@@ -185,6 +185,15 @@ assert.ok(
     popupJs.includes('removeEntry(entry).catch(reportDeleteError)'),
   'delete entry actions should catch storage failures and surface them instead of fire-and-forget'
 );
+const removeEntryBlock = popupJs.match(/async function removeEntry\(entry\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  removeEntryBlock.includes('const wasSelected = state.selectedIds.has(entry.id);') &&
+    removeEntryBlock.includes('await persist(next.entries);') &&
+    removeEntryBlock.includes('state.selectedIds.delete(entry.id);') &&
+    removeEntryBlock.includes('state.pendingGroupSelectedIds = state.pendingGroupSelectedIds.filter') &&
+    removeEntryBlock.indexOf('await persist(next.entries);') < removeEntryBlock.indexOf('state.selectedIds.delete(entry.id);'),
+  'single-entry delete should preserve selection state until storage persistence succeeds'
+);
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
 assert.ok(

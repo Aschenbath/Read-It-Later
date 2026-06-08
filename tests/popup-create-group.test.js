@@ -465,6 +465,32 @@ async function main() {
 
   {
     const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Keep selected',
+      url: 'https://docs.example/keep-selected'
+    }, 1000);
+    api.state.entries = [entry];
+    api.state.selectionMode = true;
+    api.state.selectedIds.add(entry.id);
+    api.state.pendingGroupSelectedIds = [entry.id];
+    api.render();
+
+    await assert.rejects(
+      () => api.removeEntry(entry),
+      /Storage write failed/
+    );
+
+    assert.deepStrictEqual(api.state.entries.map(item => item.id), [entry.id], 'failed selected-entry remove should keep the entry in memory');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed selected-entry remove should not persist deletion');
+    assert.deepStrictEqual(Array.from(api.state.selectedIds), [entry.id], 'failed selected-entry remove should keep selection state');
+    assert.deepStrictEqual(api.state.pendingGroupSelectedIds, [entry.id]);
+    const card = api.els.entriesList.querySelector(`[data-id="${entry.id}"]`);
+    assert.ok(card, 'failed selected-entry remove should render the original card again');
+    assert.strictEqual(card.classList.contains('leaving'), false);
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
     const entries = [
       ReadLaterCore.buildEntryFromTab({ title: 'Selected A', url: 'https://docs.example/a' }, 1000),
       ReadLaterCore.buildEntryFromTab({ title: 'Selected B', url: 'https://docs.example/b' }, 1000),

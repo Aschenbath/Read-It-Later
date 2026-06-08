@@ -599,11 +599,7 @@ function animateListReflow(previousPositions, options = {}) {
 async function removeEntry(entry) {
   const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
   if (!next.changed) return;
-
-  // Clean up selection state if the entry was selected
-  if (state.selectedIds.has(entry.id)) {
-    state.selectedIds.delete(entry.id);
-  }
+  const wasSelected = state.selectedIds.has(entry.id);
 
   const card = els.entriesList.querySelector(`[data-id="${CSS.escape(entry.id)}"]`);
   if (card) {
@@ -629,6 +625,16 @@ async function removeEntry(entry) {
   } catch (error) {
     render();
     throw error;
+  }
+
+  if (wasSelected) {
+    state.selectedIds.delete(entry.id);
+    state.pendingGroupSelectedIds = state.pendingGroupSelectedIds.filter(id => id !== entry.id);
+    if (state.selectionMode && state.selectedIds.size === 0) {
+      exitSelectionMode();
+    } else {
+      render();
+    }
   }
 }
 
