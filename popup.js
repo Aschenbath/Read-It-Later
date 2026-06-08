@@ -253,6 +253,9 @@ async function removeEntry(entry) {
 
   const card = els.entriesList.querySelector(`[data-id="${CSS.escape(entry.id)}"]`);
   if (card) {
+    // Prevent double-deletion by checking if already leaving
+    if (card.classList.contains('leaving')) return;
+
     card.classList.add('leaving');
     await new Promise(resolve => {
       const onAnimationEnd = () => {
@@ -860,10 +863,24 @@ function bind() {
     }
   });
   els.viewModeBtn.addEventListener('click', toggleViewMode);
+
+  // Debounce search input for performance
+  let searchDebounceTimer = null;
   els.searchInput.addEventListener('input', () => {
-    state.query = els.searchInput.value;
-    render();
+    const value = els.searchInput.value;
+
+    // Update clear button immediately for instant visual feedback
+    if (!state.selectionMode) {
+      els.clearSearchBtn.classList.toggle('hidden', !value);
+    }
+
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      state.query = value;
+      render();
+    }, 150);
   });
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       if (state.selectionMode) {
