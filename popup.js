@@ -1121,7 +1121,7 @@ function renderDomainGroup(group) {
     }
   }
 
-  const toggleExpansion = () => {
+  const toggleExpansion = async () => {
     if (group.count === 0) return;
 
     clearEmptyGroupDeleteArming();
@@ -1136,9 +1136,17 @@ function renderDomainGroup(group) {
 
     if (wasExpanded) {
       state.expandedDomains.delete(group.domain);
-      persistExpandedDomains().catch((error) => {
+      try {
+        await persistExpandedDomains();
+      } catch (error) {
+        state.expandedDomains.add(group.domain);
+        header.setAttribute('aria-expanded', 'true');
+        contentWrap.classList.remove('is-collapsing');
+        contentWrap.classList.add('is-expanded');
+        header.classList.remove('is-animating');
         setStatus(error && error.message ? error.message : 'Could not save group state');
-      });
+        return;
+      }
       header.setAttribute('aria-expanded', 'false');
       contentWrap.classList.add('is-collapsing');
 
@@ -1155,9 +1163,17 @@ function renderDomainGroup(group) {
       }, 770);
     } else {
       state.expandedDomains.add(group.domain);
-      persistExpandedDomains().catch((error) => {
+      try {
+        await persistExpandedDomains();
+      } catch (error) {
+        state.expandedDomains.delete(group.domain);
+        header.setAttribute('aria-expanded', 'false');
+        contentWrap.classList.remove('is-expanded');
+        contentWrap.classList.remove('is-collapsing');
+        header.classList.remove('is-animating');
         setStatus(error && error.message ? error.message : 'Could not save group state');
-      });
+        return;
+      }
       header.setAttribute('aria-expanded', 'true');
       contentWrap.offsetHeight;
       contentWrap.classList.add('is-expanded');
@@ -1175,7 +1191,7 @@ function renderDomainGroup(group) {
       return;
     }
     if (group.count === 0) return;
-    toggleExpansion();
+    return toggleExpansion();
   });
 
   header.addEventListener('keydown', (e) => {
@@ -1184,7 +1200,7 @@ function renderDomainGroup(group) {
     }
     if (group.count === 0) return;
     e.preventDefault();
-    toggleExpansion();
+    return toggleExpansion();
   });
 
   const content = document.createElement('div');

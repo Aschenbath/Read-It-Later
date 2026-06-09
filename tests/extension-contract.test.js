@@ -370,6 +370,19 @@ assert.ok(
     popupJs.includes('clearTimeout(groupUnlockTimer)'),
   'rapid group toggles should cancel stale expand/collapse cleanup timers before scheduling the next animation'
 );
+const toggleExpansionBlock = popupJs.match(/const toggleExpansion = async \(\) => \{[\s\S]*?\n  \};/)?.[0] || '';
+assert.ok(
+  toggleExpansionBlock &&
+    toggleExpansionBlock.includes('await persistExpandedDomains();') &&
+    toggleExpansionBlock.includes('state.expandedDomains.add(group.domain);') &&
+    toggleExpansionBlock.includes('state.expandedDomains.delete(group.domain);') &&
+    toggleExpansionBlock.includes("header.classList.remove('is-animating')"),
+  'group expand/collapse should await persisted state and roll back visual state on storage failure'
+);
+assert.ok(
+  !toggleExpansionBlock.includes('persistExpandedDomains().catch'),
+  'group expand/collapse persistence should not be fire-and-forget'
+);
 assert.ok(
   popupJs.includes('contentWrap.offsetHeight;') &&
     !popupJs.includes('requestAnimationFrame(() => {\n      requestAnimationFrame(() => {\n        contentWrap.classList.add(\'is-expanded\');'),

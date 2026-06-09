@@ -673,15 +673,67 @@ async function main() {
     const node = api.renderDomainGroup(group);
     const header = node.querySelector('.domain-group-header');
 
-    header.click();
+    await dispatchAndWait(header, { type: 'click', target: header });
 
     assert.strictEqual(api.state.expandedDomains.has('Docs'), true);
     assert.strictEqual(header.getAttribute('aria-expanded'), 'true');
 
-    header.click();
+    await dispatchAndWait(header, { type: 'click', target: header });
 
     assert.strictEqual(api.state.expandedDomains.has('Docs'), false);
     assert.strictEqual(header.getAttribute('aria-expanded'), 'false');
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Grouped page',
+      url: 'https://docs.example/read'
+    }, 1000);
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries: [entry],
+      count: 1
+    });
+    const header = node.querySelector('.domain-group-header');
+    const contentWrap = node.querySelector('.domain-group-content');
+
+    await dispatchAndWait(header, { type: 'click', target: header });
+    await flushPromises();
+
+    assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
+    assert.strictEqual(api.state.expandedDomains.has('Docs'), false, 'failed expand persistence should roll back expanded state');
+    assert.strictEqual(header.getAttribute('aria-expanded'), 'false', 'failed expand persistence should restore aria state');
+    assert.strictEqual(contentWrap.classList.contains('is-expanded'), false, 'failed expand persistence should collapse the panel again');
+    assert.strictEqual(storage.readLaterExpandedDomains, undefined, 'failed expand persistence should not write storage');
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Grouped page',
+      url: 'https://docs.example/read'
+    }, 1000);
+    api.state.expandedDomains.add('Docs');
+    const node = api.renderDomainGroup({
+      type: 'group',
+      domain: 'Docs',
+      entries: [entry],
+      count: 1
+    });
+    const header = node.querySelector('.domain-group-header');
+    const contentWrap = node.querySelector('.domain-group-content');
+
+    await dispatchAndWait(header, { type: 'click', target: header });
+    await flushPromises();
+
+    assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
+    assert.strictEqual(api.state.expandedDomains.has('Docs'), true, 'failed collapse persistence should restore expanded state');
+    assert.strictEqual(header.getAttribute('aria-expanded'), 'true', 'failed collapse persistence should restore aria state');
+    assert.strictEqual(contentWrap.classList.contains('is-expanded'), true, 'failed collapse persistence should keep the panel open');
+    assert.strictEqual(contentWrap.classList.contains('is-collapsing'), false, 'failed collapse persistence should clear the collapsing phase');
+    assert.strictEqual(storage.readLaterExpandedDomains, undefined, 'failed collapse persistence should not write storage');
   }
 
   {
