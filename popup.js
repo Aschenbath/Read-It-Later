@@ -306,6 +306,9 @@ async function toggleViewMode() {
   const exitClass = isCurrentlyGrouped ? 'mode-exit-grouped' : 'mode-exit-flat';
   const enterClass = isCurrentlyGrouped ? 'mode-enter-flat' : 'mode-enter-grouped';
   const rollbackEnterClass = isCurrentlyGrouped ? 'mode-enter-grouped' : 'mode-enter-flat';
+  const persistNextMode = persistViewMode(nextMode)
+    .then(() => ({ ok: true }))
+    .catch(error => ({ ok: false, error }));
 
   document.body.classList.add(exitClass);
 
@@ -325,9 +328,9 @@ async function toggleViewMode() {
 
   document.body.classList.remove(exitClass);
 
-  try {
-    await persistViewMode(nextMode);
-  } catch (error) {
+  const persistResult = await persistNextMode;
+  if (!persistResult.ok) {
+    const error = persistResult.error;
     state.viewMode = previousMode;
     document.body.classList.toggle('flat-view', state.viewMode === 'flat');
     document.body.classList.add(rollbackEnterClass);

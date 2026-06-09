@@ -423,10 +423,17 @@ assert.ok(toggleViewModeBlock.includes('setTimeout(resolve, 600)') && toggleView
 assert.ok(
   toggleViewModeBlock.includes('const previousMode = state.viewMode;') &&
     toggleViewModeBlock.includes('const nextMode =') &&
-    toggleViewModeBlock.includes('await persistViewMode(nextMode);') &&
+    toggleViewModeBlock.includes('const persistNextMode = persistViewMode(nextMode)') &&
+    toggleViewModeBlock.includes(".then(() => ({ ok: true }))") &&
+    toggleViewModeBlock.includes("catch(error => ({ ok: false, error }))") &&
+    toggleViewModeBlock.includes('const persistResult = await persistNextMode;') &&
     toggleViewModeBlock.includes('state.viewMode = previousMode;') &&
     toggleViewModeBlock.includes('state.isTransitioningMode = false;'),
-  'view-mode switching should treat storage persistence as the commit boundary and roll back cleanly on failure'
+  'view-mode switching should start storage persistence during exit motion, still treat it as the commit boundary, and roll back cleanly on failure'
+);
+assert.ok(
+  toggleViewModeBlock.indexOf('const persistNextMode = persistViewMode(nextMode)') < toggleViewModeBlock.indexOf('document.body.classList.add(exitClass)'),
+  'view-mode persistence should start before the exit animation so storage latency is hidden behind motion'
 );
 assert.ok(
   !toggleViewModeBlock.includes('persistViewMode().catch'),

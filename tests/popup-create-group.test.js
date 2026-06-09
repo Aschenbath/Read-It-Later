@@ -1299,7 +1299,7 @@ async function main() {
   }
 
   {
-    const { api, document, storage, timers } = createHarness({
+    const { api, document, setCalls, storage, timers } = createHarness({
       setError: 'Storage write failed',
       deferAnimationTimers: true
     });
@@ -1315,6 +1315,11 @@ async function main() {
 
     assert.strictEqual(api.state.isTransitioningMode, true, 'view-mode transition should start');
     assert.strictEqual(api.state.viewMode, 'flat', 'view mode should not change before the exit phase ends');
+    assert.deepStrictEqual(
+      JSON.parse(JSON.stringify(setCalls)),
+      [{ readLaterViewMode: 'grouped' }],
+      'view-mode persistence should start during the exit phase so storage latency is hidden behind motion'
+    );
     assert.strictEqual(timers[0].delay, 600, 'mode switch should still use the original exit timing');
 
     timers.shift().callback();
