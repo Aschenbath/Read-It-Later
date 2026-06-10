@@ -349,8 +349,9 @@ const groupContentBlock = css.match(/\.domain-group-content\s*\{[\s\S]*?\n\}/)?.
 assert.ok(
   groupContentBlock &&
     groupContentBlock.includes('max-height: 0') &&
-    groupContentBlock.includes('max-height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) 0.5s'),
-  'group expansion should keep the delayed max-height setup for staged collapse'
+    groupContentBlock.includes('max-height 0.3s cubic-bezier(0.22, 0.61, 0.36, 1)') &&
+    !/max-height 0\.3s cubic-bezier\(0\.22, 0\.61, 0\.36, 1\)\s+0\.\d+s/.test(groupContentBlock),
+  'group content max-height collapse must start immediately after the card exit phase, with no dead transition delay'
 );
 assert.ok(
   popupJs.includes('function snapshotListPositions') &&
@@ -382,6 +383,17 @@ assert.ok(
 assert.ok(
   !toggleExpansionBlock.includes('persistExpandedDomains().catch'),
   'group expand/collapse persistence should not be fire-and-forget'
+);
+assert.ok(
+  toggleExpansionBlock.includes('contentWrap.style.maxHeight = `${contentWrap.scrollHeight}px`;') &&
+    toggleExpansionBlock.includes("contentWrap.style.maxHeight = '0px';"),
+  'group collapse should animate max-height down from the real rendered height so the close is a visible motion instead of a delayed snap'
+);
+assert.ok(
+  toggleExpansionBlock.includes('Math.min(group.count, GROUP_CARD_STAGGER_LIMIT)') &&
+    popupJs.includes('const GROUP_CARD_EXIT_MS = 350;') &&
+    popupJs.includes('const GROUP_CARD_STAGGER_MS = 60;'),
+  'group collapse wait should scale with the actual staggered card count instead of always waiting for the worst-case stagger'
 );
 assert.ok(
   popupJs.includes('contentWrap.offsetHeight;') &&

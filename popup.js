@@ -28,6 +28,10 @@ const els = {};
 let statusTimer = null;
 const pendingStorageEchoes = new Map();
 const ENTRY_EXIT_ANIMATION_MS = 220;
+const GROUP_CARD_EXIT_MS = 350;
+const GROUP_CARD_STAGGER_MS = 60;
+const GROUP_CARD_STAGGER_LIMIT = 8;
+const GROUP_CONTENT_CLOSE_MS = 300;
 
 function byId(id) {
   return document.getElementById(id);
@@ -1130,6 +1134,7 @@ function renderDomainGroup(group) {
     clearEmptyGroupDeleteArming();
     clearPendingGroupAnimation();
     contentWrap.classList.remove('is-collapsing');
+    contentWrap.style.maxHeight = '';
     header.classList.remove('is-animating');
 
     const previousPositions = snapshotListPositions();
@@ -1153,17 +1158,23 @@ function renderDomainGroup(group) {
       header.setAttribute('aria-expanded', 'false');
       contentWrap.classList.add('is-collapsing');
 
+      const cardExitMs = GROUP_CARD_EXIT_MS +
+        GROUP_CARD_STAGGER_MS * (Math.min(group.count, GROUP_CARD_STAGGER_LIMIT) - 1);
       groupAnimationTimer = setTimeout(() => {
         groupAnimationTimer = null;
+        contentWrap.style.maxHeight = `${contentWrap.scrollHeight}px`;
         contentWrap.classList.remove('is-expanded');
         contentWrap.classList.remove('is-collapsing');
+        contentWrap.offsetHeight;
+        contentWrap.style.maxHeight = '0px';
         animateListReflow(previousPositions, { exclude: container });
 
         groupUnlockTimer = setTimeout(() => {
           groupUnlockTimer = null;
+          contentWrap.style.maxHeight = '';
           header.classList.remove('is-animating');
-        }, 300);
-      }, 770);
+        }, GROUP_CONTENT_CLOSE_MS);
+      }, cardExitMs);
     } else {
       state.expandedDomains.add(group.domain);
       try {
