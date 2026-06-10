@@ -494,6 +494,35 @@ assert.ok(
     css.includes('.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(even)'),
   'local group expand/collapse should keep the alternating left/right choreography'
 );
+assert.ok(
+  css.includes('.entries-list.fade-top') &&
+    css.includes('.entries-list.fade-bottom') &&
+    css.includes('.entries-list.fade-top.fade-bottom') &&
+    css.includes('mask-image: linear-gradient(180deg, transparent 0, #000 18px'),
+  'entries list should soften scrolled edges with mask-image fades'
+);
+assert.ok(
+  popupJs.includes('function updateScrollFades()') &&
+    popupJs.includes("els.entriesList.addEventListener('scroll', updateScrollFades, { passive: true })") &&
+    popupJs.includes("els.entriesList.addEventListener('transitionend', updateScrollFades)"),
+  'popup should keep scroll-edge fade classes in sync with scroll position and group transitions'
+);
+assert.ok(
+  popupJs.includes("title.classList.toggle('tooltip-above'") &&
+    css.includes('.entry-title.tooltip-above[title]:hover::after'),
+  'long-title tooltips should flip above low cards so the list clip cannot cut them off'
+);
+assert.ok(
+  popupJs.includes('count.textContent = pageCountLabel(group.count);') &&
+    !popupJs.includes('pages from ${group.domain}`'),
+  'group header count and aria label should use the shared singular/plural page label'
+);
+assert.ok(!css.includes('.entry-domain'), 'dead per-card domain styling should stay removed');
+assert.ok(
+  /\.entry-open-button:focus-visible\s*\{[^}]*outline: 2px solid rgba\(79, 155, 133, 0\.45\)/.test(css) &&
+    /\.delete-button:focus-visible\s*\{[^}]*outline: 2px solid rgba\(184, 92, 87, 0\.35\)/.test(css),
+  'keyboard focus on entry cards and delete buttons should show a visible focus ring'
+);
 assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
 assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');

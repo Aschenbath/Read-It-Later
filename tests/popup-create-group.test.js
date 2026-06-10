@@ -460,6 +460,23 @@ async function main() {
 
   {
     const { api } = createHarness();
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Single page group',
+      url: 'https://docs.example/solo'
+    }, 1000);
+    entry.domain = 'Solo Group';
+    api.state.entries = [entry];
+    api.state.customGroups = ['Solo Group'];
+    api.state.viewMode = 'grouped';
+    api.render();
+
+    const count = api.els.entriesList.querySelector('.domain-group-count');
+    assert.ok(count, 'single-entry custom group should render as a group');
+    assert.strictEqual(count.textContent, '1 page', 'single-entry group count should use the singular page label');
+  }
+
+  {
+    const { api } = createHarness();
     api.state.customGroups = ['Temp'];
     api.state.emptyGroupDeleteArmed.add('Temp');
 

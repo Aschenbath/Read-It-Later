@@ -641,6 +641,16 @@ function animateListReflow(previousPositions, options = {}) {
   });
 }
 
+function updateScrollFades() {
+  const list = els.entriesList;
+  if (!list || !list.classList) return;
+  const scrollTop = Number(list.scrollTop) || 0;
+  const clientHeight = Number(list.clientHeight) || 0;
+  const scrollHeight = Number(list.scrollHeight) || 0;
+  list.classList.toggle('fade-top', scrollTop > 4);
+  list.classList.toggle('fade-bottom', scrollTop + clientHeight < scrollHeight - 4);
+}
+
 async function removeEntry(entry) {
   const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
   if (!next.changed) return;
@@ -711,6 +721,22 @@ function renderEntry(entry) {
   title.textContent = entry.title;
   if (entry.title && entry.title.length > 35) {
     title.title = entry.title;
+    // Flip the hover tooltip above the title when the card sits low in the
+    // list, so the list-shell overflow clip cannot cut the tooltip off.
+    title.addEventListener('mouseenter', () => {
+      if (
+        typeof title.getBoundingClientRect !== 'function' ||
+        !els.entriesList ||
+        typeof els.entriesList.getBoundingClientRect !== 'function'
+      ) {
+        return;
+      }
+      const titleRect = title.getBoundingClientRect();
+      const listRect = els.entriesList.getBoundingClientRect();
+      const titleCenter = titleRect.top + titleRect.height / 2;
+      const flipThreshold = listRect.top + listRect.height * 0.6;
+      title.classList.toggle('tooltip-above', titleCenter > flipThreshold);
+    });
   }
 
   const savedAt = document.createElement('span');
@@ -916,7 +942,7 @@ function renderDomainGroup(group) {
   if (group.count > 0) {
     header.setAttribute('role', 'button');
     header.tabIndex = 0;
-    header.setAttribute('aria-label', `${group.count} pages from ${group.domain}`);
+    header.setAttribute('aria-label', `${pageCountLabel(group.count)} from ${group.domain}`);
     header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
   }
 
@@ -933,7 +959,7 @@ function renderDomainGroup(group) {
 
   const count = document.createElement('span');
   count.className = 'domain-group-count';
-  count.textContent = `${group.count} pages`;
+  count.textContent = pageCountLabel(group.count);
 
   info.appendChild(domainText);
   info.appendChild(count);
@@ -1379,6 +1405,8 @@ function render() {
     els.clearSearchBtn.setAttribute('aria-label', 'Clear search');
     els.deleteSelectedBtn.classList.add('hidden'); // Always hide in normal mode
   }
+
+  updateScrollFades();
 }
 
 async function addCurrentPage() {
@@ -1475,6 +1503,12 @@ function bind() {
     deleteSelectedEntries().catch(reportDeleteError);
   });
   els.viewModeBtn.addEventListener('click', toggleViewMode);
+
+  // Scroll-edge fades: track scroll position plus group expand/collapse
+  // transitions that change scrollHeight without firing a scroll event.
+  els.entriesList.addEventListener('scroll', updateScrollFades, { passive: true });
+  els.entriesList.addEventListener('transitionend', updateScrollFades);
+  els.entriesList.addEventListener('animationend', updateScrollFades);
 
   // Debounce search input for performance
   let searchDebounceTimer = null;

@@ -218,6 +218,9 @@ h1 {
   cursor: pointer;
   transform: translateY(-50%);
   z-index: 1;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .view-mode-button:hover,
@@ -409,6 +412,9 @@ h1 {
   color: #8d928f;
   cursor: pointer;
   transform: translateY(-50%);
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .search-clear-button:hover,
@@ -465,6 +471,22 @@ h1 {
 /* Hide scrollbar for Chrome/Safari/Opera */
 .entries-list::-webkit-scrollbar {
   display: none;
+}
+
+/* Scroll-edge fades: soften the hard clip while content extends past an edge */
+.entries-list.fade-top {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 100%);
+}
+
+.entries-list.fade-bottom {
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 18px), transparent 100%);
+}
+
+.entries-list.fade-top.fade-bottom {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
 }
 
 .entry-card {
@@ -721,6 +743,11 @@ h1 {
   outline: none;
 }
 
+.entry-open-button:focus-visible {
+  outline: 2px solid rgba(79, 155, 133, 0.45);
+  outline-offset: 2px;
+}
+
 .entry-card.is-current-tab .entry-open-button {
   border-color: #98c6b5;
   background:
@@ -843,15 +870,21 @@ h1 {
   }
 }
 
-.entry-domain {
-  display: block;
-  min-width: 0;
-  color: #5a6169;
-  font-size: 12.5px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.entry-title.tooltip-above[title]:hover::after {
+  top: auto;
+  bottom: calc(100% + 6px);
+  animation: tooltipInUp 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes tooltipInUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .entry-meta {
@@ -904,6 +937,11 @@ h1 {
   background: #f0e7e3;
   color: var(--danger);
   outline: none;
+}
+
+.delete-button:focus-visible {
+  outline: 2px solid rgba(184, 92, 87, 0.35);
+  outline-offset: 1px;
 }
 
 .delete-button:active {
