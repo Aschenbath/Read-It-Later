@@ -12,6 +12,7 @@ const {
   normalizeEntries,
   normalizeEntry,
   normalizeUrl,
+  renameEntryTitle,
   sortEntriesForDisplay,
   upsertEntry
 } = require('../read-later-core');
@@ -32,6 +33,9 @@ assert.strictEqual(normalizeUrl('not a url'), 'not a url');
 
 assert.strictEqual(domainFromUrl('https://www.bilibili.com/video/BV1xx'), 'www.bilibili.com');
 assert.strictEqual(domainFromUrl('chrome://extensions'), 'chrome://extensions');
+assert.strictEqual(domainFromUrl('file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf'), 'Local Files');
+assert.strictEqual(domainFromUrl('file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md'), 'Local Files');
+assert.strictEqual(domainFromUrl('file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html'), 'Local Files');
 assert.strictEqual(domainFromUrl('not a url'), 'not a url');
 assert.strictEqual(domainFromUrl(''), '');
 
@@ -50,7 +54,14 @@ assert.strictEqual(isSavableTab({ url: 'about:blank' }), false);
 assert.strictEqual(isSavableTab({ url: 'chrome-extension://abc/popup.html' }), false);
 assert.strictEqual(isSavableTab({ url: 'javascript:alert(1)' }), false);
 assert.strictEqual(isSavableTab({ url: 'data:text/html,<h1>x</h1>' }), false);
-assert.strictEqual(isSavableTab({ url: 'file:///C:/Users/aschenbath/Desktop/local.html' }), false);
+assert.strictEqual(isSavableTab({ url: 'file:///C:/Users/aschenbath/Desktop/local.html' }), true);
+assert.strictEqual(isSavableTab({ url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf' }), true);
+assert.strictEqual(isSavableTab({ url: 'file:///F:/2.%20ObsidianNotes/SCAU/STATS-REVIEW.PDF#page=34' }), true);
+assert.strictEqual(isSavableTab({ url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md' }), true);
+assert.strictEqual(isSavableTab({ url: 'file:///F:/2.%20ObsidianNotes/SCAU/STATS-REVIEW.MARKDOWN#heading' }), true);
+assert.strictEqual(isSavableTab({ url: 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html#software' }), true);
+assert.strictEqual(isSavableTab({ url: 'file:///D:/Codex/key/archive.zip' }), true);
+assert.strictEqual(isSavableTab({ url: 'file:///D:/Codex/key/README' }), true);
 assert.strictEqual(isSavableTab({ url: 'not a url' }), false);
 
 assert.deepStrictEqual(buildEntryFromTab({
@@ -64,6 +75,48 @@ assert.deepStrictEqual(buildEntryFromTab({
   url: 'https://linux.do/t/topic/123',
   domain: 'linux.do',
   favIconUrl: 'https://linux.do/favicon.ico',
+  createdAt: now,
+  updatedAt: now
+});
+
+assert.deepStrictEqual(buildEntryFromTab({
+  title: '',
+  url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf#page=34',
+  favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png'
+}, now), {
+  id: 'file%3A%2F%2F%2FF%3A%2F2.%2520ObsidianNotes%2FSCAU%2Fstats-review.pdf',
+  title: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf',
+  url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf',
+  domain: 'Local Files',
+  favIconUrl: '',
+  createdAt: now,
+  updatedAt: now
+});
+
+assert.deepStrictEqual(buildEntryFromTab({
+  title: '  stats-review.md  ',
+  url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md#chapter-1',
+  favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png'
+}, now), {
+  id: 'file%3A%2F%2F%2FF%3A%2F2.%2520ObsidianNotes%2FSCAU%2Fstats-review.md',
+  title: 'stats-review.md',
+  url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md',
+  domain: 'Local Files',
+  favIconUrl: '',
+  createdAt: now,
+  updatedAt: now
+});
+
+assert.deepStrictEqual(buildEntryFromTab({
+  title: '软件工程概念刷题',
+  url: 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html#software',
+  favIconUrl: 'file:///F:/SCAU/favicon.ico'
+}, now), {
+  id: 'file%3A%2F%2F%2FF%3A%2FSCAU%2F%25E5%2588%25B7%25E9%25A2%2598%25E6%2580%25BB%25E5%2585%25A5%25E5%258F%25A3.html',
+  title: '软件工程概念刷题',
+  url: 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html',
+  domain: 'Local Files',
+  favIconUrl: '',
   createdAt: now,
   updatedAt: now
 });
@@ -120,13 +173,40 @@ const recoveredEntries = normalizeEntries([
     url: 'chrome://extensions/',
     favIconUrl: 'chrome://favicon/size/32/chrome://extensions',
     updatedAt: now
+  },
+  {
+    title: 'Recovered local PDF',
+    url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf#page=34',
+    favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png',
+    updatedAt: now - 50
+  },
+  {
+    title: 'Recovered local Markdown',
+    url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md#chapter-1',
+    favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png',
+    updatedAt: now - 60
+  },
+  {
+    title: 'Recovered local HTML',
+    url: 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html#software',
+    favIconUrl: 'file:///F:/SCAU/favicon.ico',
+    updatedAt: now - 70
   }
 ], now);
 assert.deepStrictEqual(recoveredEntries.map(entry => entry.url), [
   'chrome://extensions',
+  'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf',
+  'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md',
+  'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html',
   'https://example.com/safe'
 ]);
 assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Safe page').favIconUrl, '');
+assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Recovered local PDF').domain, 'Local Files');
+assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Recovered local PDF').favIconUrl, '');
+assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Recovered local Markdown').domain, 'Local Files');
+assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Recovered local Markdown').favIconUrl, '');
+assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Recovered local HTML').domain, 'Local Files');
+assert.strictEqual(recoveredEntries.find(entry => entry.title === 'Recovered local HTML').favIconUrl, '');
 
 const dedupedRecoveredEntries = normalizeEntries([
   {
@@ -187,6 +267,24 @@ assert.deepStrictEqual(upserted.entries.map(entry => entry.title), ['New title',
 assert.strictEqual(upserted.entries[0].createdAt, now - 1000);
 assert.strictEqual(upserted.entries[0].updatedAt, now + 1000);
 assert.strictEqual(upserted.entries[0].favIconUrl, 'https://example.com/icon.png');
+
+const renamed = renameEntryTitle(existing, existing[0].id, '  Custom study title  ', now + 1500);
+assert.strictEqual(renamed.changed, true);
+assert.strictEqual(renamed.entry.title, 'Custom study title');
+assert.strictEqual(renamed.entry.customTitle, true);
+assert.strictEqual(renamed.entry.updatedAt, now + 1500);
+assert.strictEqual(renameEntryTitle(existing, existing[0].id, '   ', now + 1500).changed, false);
+assert.strictEqual(renameEntryTitle(existing, 'missing', 'Custom study title', now + 1500).changed, false);
+
+const upsertedRenamed = upsertEntry(renamed.entries, buildEntryFromTab({
+  title: 'Browser title should not overwrite custom title',
+  url: 'https://example.com/post#again',
+  favIconUrl: 'https://example.com/icon-2.png'
+}, now + 2000));
+assert.strictEqual(upsertedRenamed.entries[0].title, 'Custom study title');
+assert.strictEqual(upsertedRenamed.entries[0].customTitle, true);
+assert.strictEqual(upsertedRenamed.entries[0].updatedAt, now + 2000);
+assert.strictEqual(upsertedRenamed.entries[0].favIconUrl, 'https://example.com/icon-2.png');
 
 const manuallyGrouped = [
   {

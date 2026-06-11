@@ -13,6 +13,7 @@ const SAVABLE_PROTOCOLS = new Set([
   'vivaldi:'
 ]);
 const BLOCKED_ABOUT_PATHS = new Set(['blank', 'srcdoc']);
+const LOCAL_FILE_DOMAIN = 'Local Files';
 const SAFE_DATA_IMAGE_TYPES = new Set([
   'avif',
   'bmp',
@@ -56,6 +57,9 @@ function domainFromUrl(value) {
   if (!url) return '';
   try {
     const parsed = new URL(url);
+    if (parsed.protocol === 'file:') {
+      return LOCAL_FILE_DOMAIN;
+    }
     if (!/^https?:$/i.test(parsed.protocol)) {
       return `${parsed.protocol}//${parsed.hostname || parsed.pathname}`.replace(/\/+$/, '');
     }
@@ -77,6 +81,9 @@ function isSavableUrl(value) {
     if (parsed.protocol === 'about:') {
       const path = cleanText(parsed.pathname).toLowerCase();
       return !!path && !BLOCKED_ABOUT_PATHS.has(path);
+    }
+    if (parsed.protocol === 'file:') {
+      return true;
     }
     return SAVABLE_PROTOCOLS.has(parsed.protocol);
   } catch {
@@ -107,7 +114,7 @@ function normalizeEntry(entry, now = Date.now()) {
   const title = cleanText(source.title) || url || 'Untitled';
   const createdAt = Number.isFinite(Number(source.createdAt)) ? Number(source.createdAt) : now;
   const updatedAt = Number.isFinite(Number(source.updatedAt)) ? Number(source.updatedAt) : now;
-  return {
+  const normalized = {
     id: cleanText(source.id) || idFromUrl(url),
     title,
     url,
@@ -116,6 +123,10 @@ function normalizeEntry(entry, now = Date.now()) {
     createdAt,
     updatedAt
   };
+  if (source.customTitle === true) {
+    normalized.customTitle = true;
+  }
+  return normalized;
 }
 
 function buildEntryFromTab(tab, now = Date.now()) {
@@ -148,13 +159,27 @@ function mergeRecoveredEntry(current, candidate) {
   const other = winner === candidate ? current : candidate;
   const winnerCustomDomain = isCustomDomainEntry(winner) ? winner.domain : '';
   const otherCustomDomain = isCustomDomainEntry(other) ? other.domain : '';
-  return {
+  const customTitleEntry = current.customTitle && candidate.customTitle
+    ? winner
+    : current.customTitle
+      ? current
+      : candidate.customTitle
+        ? candidate
+        : null;
+  const merged = {
     ...winner,
+    title: customTitleEntry ? customTitleEntry.title : winner.title,
     createdAt: Math.min(Number(current.createdAt) || 0, Number(candidate.createdAt) || 0),
     updatedAt: Math.max(Number(current.updatedAt) || 0, Number(candidate.updatedAt) || 0),
     domain: winnerCustomDomain || otherCustomDomain || winner.domain,
     favIconUrl: winner.favIconUrl || other.favIconUrl || ''
   };
+  if (customTitleEntry) {
+    merged.customTitle = true;
+  } else {
+    delete merged.customTitle;
+  }
+  return merged;
 }
 
 function normalizeEntries(entries, now = Date.now()) {
@@ -225,19 +250,51 @@ function upsertEntry(entries, entry) {
   // Preserve custom domain if old domain differs from extracted domain (user manually grouped it)
   const oldExtractedDomain = domainFromUrl(oldEntry.url);
   const isCustomDomain = oldDomain !== oldExtractedDomain;
+  const preserveCustomTitle = oldEntry.customTitle === true && !!oldEntry.title;
 
   const merged = {
     ...oldEntry,
     ...nextEntry,
     id: oldEntry.id || nextEntry.id,
+    title: preserveCustomTitle ? oldEntry.title : nextEntry.title,
     createdAt: oldEntry.createdAt || nextEntry.createdAt,
     updatedAt: nextEntry.updatedAt || Date.now(),
     // Preserve custom domain if it was manually set
     domain: isCustomDomain ? oldDomain : newDomain
   };
+  if (preserveCustomTitle) {
+    merged.customTitle = true;
+  } else {
+    delete merged.customTitle;
+  }
   const next = [...list];
   next[index] = merged;
   return { entries: sortEntriesForDisplay(next), changed: true, created: false, entry: merged };
+}
+
+function renameEntryTitle(entries, id, title, now = Date.now()) {
+  const nextTitle = cleanText(title);
+  if (!nextTitle) {
+    return { entries: normalizeEntries(entries), changed: false, entry: null };
+  }
+  const list = normalizeEntries(entries);
+  const index = list.findIndex(entry => entry && String(entry.id) === String(id));
+  if (index < 0) {
+    return { entries: list, changed: false, entry: null };
+  }
+  const current = list[index];
+  if (current.title === nextTitle && current.customTitle === true) {
+    return { entries: list, changed: false, entry: current };
+  }
+  const renamed = {
+    ...current,
+    title: nextTitle,
+    customTitle: true,
+    updatedAt: now
+  };
+  const next = [...list];
+  next[index] = renamed;
+  return { entries: sortEntriesForDisplay(next), changed: true, entry: renamed };
 }
 
 function deleteEntry(entries, id) {
@@ -354,6 +411,7 @@ globalThis.ReadLaterCore = {
   normalizeEntries,
   normalizeEntry,
   normalizeUrl,
+  renameEntryTitle,
   sortEntriesForDisplay,
   upsertEntry
 };

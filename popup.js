@@ -21,7 +21,8 @@ const state = {
   pendingGroupSelectedIds: [],
   showCreateGroup: false,
   viewMode: 'flat', // 'grouped' or 'flat'
-  isTransitioningMode: false
+  isTransitioningMode: false,
+  editingEntryId: null
 };
 
 const els = {};
@@ -66,7 +67,11 @@ function makeFallbackIcon(entry) {
   const fallback = document.createElement('span');
   const raw = String((entry && (entry.domain || entry.title)) || '?').replace(/^www\./i, '');
   fallback.className = 'fallback-icon';
-  fallback.dataset.letter = (raw.charAt(0) || '?').toUpperCase();
+  const letter = document.createElement('span');
+  letter.className = 'fallback-icon-letter';
+  letter.textContent = (raw.charAt(0) || '?').toUpperCase();
+  letter.setAttribute('aria-hidden', 'true');
+  fallback.appendChild(letter);
   return fallback;
 }
 
@@ -283,6 +288,7 @@ function enterSelectionMode() {
   state.selectedIds.clear();
   state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
+  state.editingEntryId = null;
   document.body.classList.add('selection-mode');
 }
 
@@ -291,6 +297,7 @@ function exitSelectionMode() {
   state.selectedIds.clear();
   state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
+  state.editingEntryId = null;
   document.body.classList.remove('selection-mode');
   render();
 }
@@ -690,6 +697,98 @@ async function removeEntry(entry) {
   }
 }
 
+function focusTitleEditor(entryId) {
+  requestAnimationFrame(() => {
+    if (!els.entriesList || !entryId) return;
+    const card = els.entriesList.querySelector(`[data-id="${CSS.escape(entryId)}"]`);
+    const input = card ? card.querySelector('.entry-title-input') : null;
+    if (!input) return;
+    input.focus();
+    input.select();
+  });
+}
+
+async function commitEntryTitle(entry, title) {
+  const next = ReadLaterCore.renameEntryTitle(state.entries, entry && entry.id, title, Date.now());
+  if (!next.changed) {
+    state.editingEntryId = null;
+    render();
+    return;
+  }
+
+  try {
+    await setPopupStorage({ [storageKey]: next.entries });
+    state.entries = next.entries;
+    state.editingEntryId = null;
+    render();
+  } catch (error) {
+    state.editingEntryId = null;
+    render();
+    setStatus(error && error.message ? error.message : 'Could not rename page');
+  }
+}
+
+function cancelEntryTitleEdit() {
+  state.editingEntryId = null;
+  render();
+}
+
+function renderEntryTitleEditor(entry) {
+  const editor = document.createElement('div');
+  editor.className = 'entry-title-editor';
+
+  const input = document.createElement('input');
+  input.className = 'entry-title-input';
+  input.type = 'text';
+  input.value = entry.title || '';
+  input.maxLength = 180;
+  input.setAttribute('aria-label', `Rename ${entry.title}`);
+
+  const actions = document.createElement('span');
+  actions.className = 'entry-title-edit-actions';
+
+  const save = document.createElement('button');
+  save.className = 'entry-title-save-button';
+  save.type = 'button';
+  save.title = 'Save name';
+  save.setAttribute('aria-label', 'Save entry name');
+  const saveIcon = document.createElement('span');
+  saveIcon.className = 'save-title-icon';
+  saveIcon.setAttribute('aria-hidden', 'true');
+  save.appendChild(saveIcon);
+
+  const cancel = document.createElement('button');
+  cancel.className = 'entry-title-cancel-button';
+  cancel.type = 'button';
+  cancel.title = 'Cancel rename';
+  cancel.setAttribute('aria-label', 'Cancel rename');
+  const cancelIcon = document.createElement('span');
+  cancelIcon.className = 'cancel-title-icon';
+  cancelIcon.setAttribute('aria-hidden', 'true');
+  cancel.appendChild(cancelIcon);
+
+  actions.appendChild(save);
+  actions.appendChild(cancel);
+  editor.appendChild(makeIcon(entry));
+  editor.appendChild(input);
+  editor.appendChild(actions);
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      return commitEntryTitle(entry, input.value);
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelEntryTitleEdit();
+    }
+  });
+  save.addEventListener('click', () => commitEntryTitle(entry, input.value));
+  cancel.addEventListener('click', cancelEntryTitleEdit);
+
+  return editor;
+}
+
 function renderEntry(entry) {
   const item = document.createElement('article');
   item.className = 'entry-card';
@@ -707,6 +806,12 @@ function renderEntry(entry) {
   // Make entry draggable in selection mode
   if (state.selectionMode && state.selectedIds.has(entry.id)) {
     item.draggable = true;
+  }
+
+  if (!state.selectionMode && state.editingEntryId === entry.id) {
+    item.classList.add('is-editing-title');
+    item.appendChild(renderEntryTitleEditor(entry));
+    return item;
   }
 
   const openButton = document.createElement('button');
@@ -757,10 +862,23 @@ function renderEntry(entry) {
   delIcon.setAttribute('aria-hidden', 'true');
   del.appendChild(delIcon);
 
+  const edit = document.createElement('button');
+  edit.className = 'edit-title-button';
+  edit.type = 'button';
+  edit.title = 'Rename';
+  edit.setAttribute('aria-label', `Rename ${entry.title}`);
+  const editIcon = document.createElement('span');
+  editIcon.className = 'edit-title-icon';
+  editIcon.setAttribute('aria-hidden', 'true');
+  edit.appendChild(editIcon);
+
   openButton.appendChild(makeIcon(entry));
   openButton.appendChild(title);
   openButton.appendChild(meta);
   item.appendChild(openButton);
+  if (!state.selectionMode) {
+    item.appendChild(edit);
+  }
   item.appendChild(del);
 
   // Long press detection
@@ -814,6 +932,13 @@ function renderEntry(entry) {
   });
 
   del.addEventListener('click', () => removeEntry(entry).catch(reportDeleteError));
+  edit.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    state.editingEntryId = entry.id;
+    render();
+    focusTitleEditor(entry.id);
+  });
 
   // Drag events for selection mode
   item.addEventListener('dragstart', (e) => {

@@ -1078,6 +1078,63 @@ async function main() {
   }
 
   {
+    const { api, storage } = createHarness({
+      tab: {
+        title: 'stats-review.pdf',
+        url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf#page=34',
+        favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png'
+      }
+    });
+
+    await api.loadEntries();
+    await api.addCurrentPage();
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY].length, 1);
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].title, 'stats-review.pdf');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].url, 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].domain, 'Local Files');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].favIconUrl, '');
+  }
+
+  {
+    const { api, storage } = createHarness({
+      tab: {
+        title: 'stats-review.md',
+        url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md#chapter-1',
+        favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png'
+      }
+    });
+
+    await api.loadEntries();
+    await api.addCurrentPage();
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY].length, 1);
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].title, 'stats-review.md');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].url, 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].domain, 'Local Files');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].favIconUrl, '');
+  }
+
+  {
+    const { api, storage } = createHarness({
+      tab: {
+        title: '软件工程概念刷题',
+        url: 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html#software',
+        favIconUrl: 'file:///F:/SCAU/favicon.ico'
+      }
+    });
+
+    await api.loadEntries();
+    await api.addCurrentPage();
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY].length, 1);
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].title, '软件工程概念刷题');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].url, 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].domain, 'Local Files');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].favIconUrl, '');
+  }
+
+  {
     const { api } = createHarness({ queryError: 'Cannot access active tab' });
 
     await api.addCurrentPage();
@@ -1106,6 +1163,52 @@ async function main() {
     assert.strictEqual(api.els.addCurrentPageBtn.classList.contains('is-saved'), true);
     assert.strictEqual(api.els.addCurrentPageBtn.title, 'Remove current page');
     assert.strictEqual(api.els.addCurrentPageBtn.getAttribute('aria-label'), 'Remove current page from Read It Later');
+  }
+
+  {
+    const { api, storage } = createHarness();
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Automatically generated PDF from existing images.',
+      url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf'
+    }, 1000);
+    api.state.entries = [entry];
+    api.render();
+
+    const editButton = api.els.entriesList.querySelector('.edit-title-button');
+    assert.ok(editButton, 'entry cards should expose a rename affordance');
+
+    editButton.click();
+    const input = api.els.entriesList.querySelector('.entry-title-input');
+    assert.ok(input, 'clicking rename should render an inline title editor');
+    assert.strictEqual(input.value, 'Automatically generated PDF from existing images.');
+    input.value = '统计学期末复习 PDF';
+
+    await dispatchAndWait(input, { type: 'keydown', key: 'Enter' });
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].title, '统计学期末复习 PDF');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].customTitle, true);
+    assert.strictEqual(api.state.entries[0].title, '统计学期末复习 PDF');
+    assert.strictEqual(api.els.entriesList.querySelector('.entry-title-input'), null);
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entry = ReadLaterCore.buildEntryFromTab({
+      title: 'Original title',
+      url: 'https://example.com/original'
+    }, 1000);
+    api.state.entries = [entry];
+    api.render();
+
+    api.els.entriesList.querySelector('.edit-title-button').click();
+    const input = api.els.entriesList.querySelector('.entry-title-input');
+    input.value = 'Should not persist';
+
+    await dispatchAndWait(input, { type: 'keydown', key: 'Enter' });
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined);
+    assert.strictEqual(api.state.entries[0].title, 'Original title');
+    assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
   }
 
   {

@@ -185,6 +185,66 @@ async function main() {
 
   {
     const harness = createHarness({
+      tab: {
+        title: 'stats-review.pdf',
+        url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf#page=34',
+        favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png'
+      },
+      storage: { [storageKey]: [oldEntry] }
+    });
+
+    await harness.quickSave();
+
+    assert.strictEqual(harness.env.storage[storageKey].length, 2);
+    assert.strictEqual(harness.env.storage[storageKey][0].title, 'stats-review.pdf');
+    assert.strictEqual(harness.env.storage[storageKey][0].url, 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf');
+    assert.strictEqual(harness.env.storage[storageKey][0].domain, 'Local Files');
+    assert.strictEqual(harness.env.storage[storageKey][0].favIconUrl, '');
+    assert.strictEqual(harness.env.notifications[0].options.title, 'Saved to Read It Later');
+  }
+
+  {
+    const harness = createHarness({
+      tab: {
+        title: 'stats-review.md',
+        url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md#chapter-1',
+        favIconUrl: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.png'
+      },
+      storage: { [storageKey]: [oldEntry] }
+    });
+
+    await harness.quickSave();
+
+    assert.strictEqual(harness.env.storage[storageKey].length, 2);
+    assert.strictEqual(harness.env.storage[storageKey][0].title, 'stats-review.md');
+    assert.strictEqual(harness.env.storage[storageKey][0].url, 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.md');
+    assert.strictEqual(harness.env.storage[storageKey][0].domain, 'Local Files');
+    assert.strictEqual(harness.env.storage[storageKey][0].favIconUrl, '');
+    assert.strictEqual(harness.env.notifications[0].options.title, 'Saved to Read It Later');
+  }
+
+  {
+    const harness = createHarness({
+      tab: {
+        title: '软件工程概念刷题',
+        url: 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html#software',
+        favIconUrl: 'file:///F:/SCAU/favicon.ico'
+      },
+      storage: { [storageKey]: [oldEntry] }
+    });
+
+    await harness.quickSave();
+
+    assert.strictEqual(harness.env.storage[storageKey].length, 2);
+    assert.strictEqual(harness.env.storage[storageKey][0].title, '软件工程概念刷题');
+    assert.strictEqual(harness.env.storage[storageKey][0].url, 'file:///F:/SCAU/%E5%88%B7%E9%A2%98%E6%80%BB%E5%85%A5%E5%8F%A3.html');
+    assert.strictEqual(harness.env.storage[storageKey][0].domain, 'Local Files');
+    assert.strictEqual(harness.env.storage[storageKey][0].favIconUrl, '');
+    assert.strictEqual(harness.env.notifications[0].options.title, 'Saved to Read It Later');
+  }
+
+  {
+    const harness = createHarness({
       tab: { title: 'Extension popup', url: 'chrome-extension://abc/popup.html' },
       storage: { [storageKey]: [oldEntry] }
     });

@@ -133,6 +133,13 @@ assert.ok(popupJs.includes("event.key === 'Escape'"), 'Escape should clear an ac
 assert.ok(popupJs.includes("event.key.toLowerCase() === 'k'"), 'Ctrl/Command+K should focus search');
 assert.ok(popupJs.includes('ReadLaterCore.formatSavedAt'), 'entries should show relative saved time for scanning');
 assert.ok(popupJs.includes('ReadLaterCore.findEntryByUrl'), 'popup should detect whether the current tab is already saved');
+assert.ok(
+  popupJs.includes('ReadLaterCore.renameEntryTitle') &&
+    popupJs.includes('state.editingEntryId') &&
+    popupJs.includes("edit.className = 'edit-title-button'") &&
+    popupJs.includes("input.className = 'entry-title-input'"),
+  'entry cards should support inline custom names through the shared rename helper'
+);
 assert.ok(popupJs.includes("meta.className = 'entry-meta'"), 'entry cards should render a compact metadata row');
 assert.ok(popupJs.includes('state.currentTabEntry'), 'popup should track the saved entry for the current tab');
 assert.ok(popupJs.includes('function refreshCurrentTabState'), 'popup should refresh current-tab save state');
@@ -309,6 +316,8 @@ assert.ok(!/min-height:\s*640px/.test(css), 'old oversized popup height should b
 assert.ok(css.includes('.search-clear-button'), 'search should expose a clear control');
 assert.ok(css.includes('.empty-action-button'), 'empty-state should provide an in-context action button');
 assert.ok(css.includes('.entry-open-button'), 'entry open button should be styled as the main card action');
+assert.ok(css.includes('.edit-title-button'), 'entry cards should expose a compact rename icon button');
+assert.ok(css.includes('.entry-title-editor'), 'inline title editing should keep a dedicated card editor surface');
 assert.ok(css.includes('.entry-meta'), 'entry metadata should be styled for fast scanning');
 assert.ok(css.includes('.entry-card.is-current-tab'), 'current tab entry should have a distinct visual state');
 assert.ok(css.includes('.add-button.is-saved'), 'add button should have a distinct saved state');
@@ -523,7 +532,12 @@ assert.ok(
     /\.delete-button:focus-visible\s*\{[^}]*outline: 2px solid rgba\(184, 92, 87, 0\.35\)/.test(css),
   'keyboard focus on entry cards and delete buttons should show a visible focus ring'
 );
-assert.ok(css.includes('content: attr(data-letter)'), 'fallback icons should render a branded letter mark');
+assert.ok(
+  popupJs.includes("letter.className = 'fallback-icon-letter'") &&
+    css.includes('.fallback-icon-letter') &&
+    !css.includes('content: attr(data-letter)'),
+  'fallback icons should use a real centered letter node instead of pseudo-content that visually drifts with CJK glyphs'
+);
 assert.ok(!css.includes('#ffb300'), 'old Chrome-colored fallback mark should be gone');
 assert.ok(!css.includes('.is-read'), 'CSS should not style read/unread entry states');
 assert.ok(!css.includes('Unread indicator'), 'CSS should not keep a read/unread indicator');
@@ -565,6 +579,13 @@ assert.ok(
   read('read-later-core.js').includes('function normalizeEntries') &&
     read('read-later-core.js').includes('isSavableUrl(entry.url)'),
   'shared storage recovery should drop entries that cannot be saved/opened by the current URL policy'
+);
+assert.ok(
+  read('read-later-core.js').includes("const LOCAL_FILE_DOMAIN = 'Local Files';") &&
+    read('read-later-core.js').includes("if (parsed.protocol === 'file:')") &&
+    read('read-later-core.js').includes('return true;') &&
+    read('read-later-core.js').includes('function renameEntryTitle'),
+  'local file saving should allow file:// URLs under a unified Local Files group and keep custom-title support in core'
 );
 
 const storageChangedBlock = popupJs.match(/chrome\.storage\.onChanged\.addListener\(\(changes, areaName\) => \{[\s\S]*?\n  \}\);/)?.[0] || '';
