@@ -310,7 +310,19 @@ assert.ok(!css.includes('100vw'), 'extension popup width must not depend on the 
 assert.ok(/width:\s*380px/.test(css), 'popup should use the compact 380px action width');
 assert.ok(/height:\s*615px/.test(css), 'popup should use golden ratio 615px action height');
 assert.ok(/min-height:\s*615px/.test(css), 'popup should use the golden ratio 615px action height');
-assert.ok(/height:\s*451px/.test(css), 'list shell should be proportioned for the golden ratio popup');
+assert.ok(!/height:\s*451px/.test(css), 'list shell should not reserve a fixed inner scroller height');
+assert.ok(
+  /\.app\s*\{[\s\S]*?overflow-y:\s*auto;/.test(css),
+  'the whole popup app should scroll so the title and search move away with the list'
+);
+assert.ok(
+  /\.list-shell\s*\{[\s\S]*?overflow:\s*visible;/.test(css),
+  'list shell should not clip the bottom of the visible reading queue'
+);
+assert.ok(
+  /\.entries-list\s*\{[\s\S]*?overflow-y:\s*visible;/.test(css),
+  'entries list should flow in the main popup scroll instead of keeping its own inner scroller'
+);
 assert.ok(!/min-width:\s*430px/.test(css), 'old oversized popup width should be gone');
 assert.ok(!/min-height:\s*640px/.test(css), 'old oversized popup height should be gone');
 assert.ok(css.includes('.search-clear-button'), 'search should expose a clear control');
@@ -503,19 +515,9 @@ assert.ok(
     css.includes('.domain-group-content.is-collapsing .domain-group-entries .entry-card:nth-child(even)'),
   'local group expand/collapse should keep the alternating left/right choreography'
 );
-assert.ok(
-  css.includes('.entries-list.fade-top') &&
-    css.includes('.entries-list.fade-bottom') &&
-    css.includes('.entries-list.fade-top.fade-bottom') &&
-    css.includes('mask-image: linear-gradient(180deg, transparent 0, #000 18px'),
-  'entries list should soften scrolled edges with mask-image fades'
-);
-assert.ok(
-  popupJs.includes('function updateScrollFades()') &&
-    popupJs.includes("els.entriesList.addEventListener('scroll', updateScrollFades, { passive: true })") &&
-    popupJs.includes("els.entriesList.addEventListener('transitionend', updateScrollFades)"),
-  'popup should keep scroll-edge fade classes in sync with scroll position and group transitions'
-);
+assert.ok(!css.includes('.entries-list.fade-bottom'), 'bottom list fade should stay removed so the last card remains fully visible');
+assert.ok(!css.includes('mask-image:'), 'popup list should not use mask-image clipping on saved entries');
+assert.ok(!popupJs.includes('function updateScrollFades()'), 'popup should not maintain obsolete inner-list fade state');
 assert.ok(
   popupJs.includes("title.classList.toggle('tooltip-above'") &&
     css.includes('.entry-title.tooltip-above[title]:hover::after'),

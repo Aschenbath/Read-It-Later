@@ -648,15 +648,6 @@ function animateListReflow(previousPositions, options = {}) {
   });
 }
 
-function updateScrollFades() {
-  const list = els.entriesList;
-  if (!list || !list.classList) return;
-  const scrollTop = Number(list.scrollTop) || 0;
-  const clientHeight = Number(list.clientHeight) || 0;
-  const scrollHeight = Number(list.scrollHeight) || 0;
-  list.classList.toggle('fade-top', scrollTop > 4);
-  list.classList.toggle('fade-bottom', scrollTop + clientHeight < scrollHeight - 4);
-}
 
 async function removeEntry(entry) {
   const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
@@ -1531,7 +1522,6 @@ function render() {
     els.deleteSelectedBtn.classList.add('hidden'); // Always hide in normal mode
   }
 
-  updateScrollFades();
 }
 
 async function addCurrentPage() {
@@ -1629,11 +1619,6 @@ function bind() {
   });
   els.viewModeBtn.addEventListener('click', toggleViewMode);
 
-  // Scroll-edge fades: track scroll position plus group expand/collapse
-  // transitions that change scrollHeight without firing a scroll event.
-  els.entriesList.addEventListener('scroll', updateScrollFades, { passive: true });
-  els.entriesList.addEventListener('transitionend', updateScrollFades);
-  els.entriesList.addEventListener('animationend', updateScrollFades);
 
   // Debounce search input for performance
   let searchDebounceTimer = null;
