@@ -4,7 +4,7 @@ const storageKey = ReadLaterCore.STORAGE_KEY;
 const expandedDomainsStorageKey = 'readLaterExpandedDomains';
 const viewModeStorageKey = 'readLaterViewMode';
 const customGroupsStorageKey = 'readLaterCustomGroups';
-
+const pinnedGroupsStorageKey = 'readLaterPinnedGroups';
 const state = {
   entries: [],
   query: '',
@@ -15,6 +15,7 @@ const state = {
   expandedDomains: new Set(),
   emptyGroupDeleteArmed: new Set(),
   customGroups: [],
+  pinnedGroups: new Set(),
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
   selectedIds: new Set(),
@@ -168,6 +169,7 @@ function shouldReloadFromStorageChange(changes, areaName) {
     customGroupsStorageKey,
     expandedDomainsStorageKey,
     viewModeStorageKey,
+    pinnedGroupsStorageKey,
     'openedDomainTabs'
   ].forEach(key => {
     if (changes[key] && !consumeStorageEcho(key, changes[key])) {
@@ -229,7 +231,8 @@ async function loadEntries() {
     openedDomainTabs: {},
     [expandedDomainsStorageKey]: [],
     [viewModeStorageKey]: 'flat',
-    [customGroupsStorageKey]: []
+    [customGroupsStorageKey]: [],
+    [pinnedGroupsStorageKey]: []
   });
   state.entries = ReadLaterCore.normalizeEntries(result[storageKey]);
 
@@ -243,6 +246,11 @@ async function loadEntries() {
   state.customGroups = Array.isArray(result[customGroupsStorageKey])
     ? result[customGroupsStorageKey].map(group => ReadLaterCore.cleanText(group)).filter(Boolean)
     : [];
+  state.pinnedGroups = new Set(
+    Array.isArray(result[pinnedGroupsStorageKey])
+      ? result[pinnedGroupsStorageKey].map(group => ReadLaterCore.cleanText(group)).filter(Boolean)
+      : []
+  );
   state.viewMode = result[viewModeStorageKey] === 'grouped' ? 'grouped' : 'flat';
 
   let currentTabError = null;
@@ -281,6 +289,10 @@ async function persistViewMode(viewMode = state.viewMode) {
 
 async function persistCustomGroups() {
   await setPopupStorage({ [customGroupsStorageKey]: state.customGroups });
+}
+
+async function persistPinnedGroups(pinnedGroups = state.pinnedGroups) {
+  await setPopupStorage({ [pinnedGroupsStorageKey]: Array.from(pinnedGroups) });
 }
 
 function enterSelectionMode() {
@@ -503,14 +515,18 @@ async function removeCustomGroup(groupName) {
   const nextCustomGroups = state.customGroups.filter(group => group !== targetDomain);
   const nextExpandedDomains = new Set(state.expandedDomains);
   nextExpandedDomains.delete(targetDomain);
+  const nextPinnedGroups = new Set(state.pinnedGroups);
+  nextPinnedGroups.delete(targetDomain);
 
   await setPopupStorage({
     [customGroupsStorageKey]: nextCustomGroups,
-    [expandedDomainsStorageKey]: Array.from(nextExpandedDomains)
+    [expandedDomainsStorageKey]: Array.from(nextExpandedDomains),
+    [pinnedGroupsStorageKey]: Array.from(nextPinnedGroups)
   });
 
   state.customGroups = nextCustomGroups;
   state.expandedDomains = nextExpandedDomains;
+  state.pinnedGroups = nextPinnedGroups;
   state.emptyGroupDeleteArmed.delete(targetDomain);
   render();
 }
@@ -574,6 +590,10 @@ function reportOpenEntryError(error) {
 
 function reportDeleteError(error) {
   setStatus(error && error.message ? error.message : 'Could not remove page', { autoClear: false });
+}
+
+function reportPinError(error) {
+  setStatus(error && error.message ? error.message : 'Could not update pin', { autoClear: false });
 }
 
 function setEmptyGroupChevronLabel(chevron, domain, isConfirming) {
@@ -648,6 +668,31 @@ function animateListReflow(previousPositions, options = {}) {
   });
 }
 
+
+async function toggleEntryPinned(entry) {
+  const next = ReadLaterCore.togglePinnedEntry(state.entries, entry && entry.id);
+  if (!next.changed) return;
+
+  await setPopupStorage({ [storageKey]: next.entries });
+  state.entries = next.entries;
+  render();
+}
+
+async function toggleGroupPinned(domain) {
+  const groupName = ReadLaterCore.cleanText(domain);
+  if (!groupName) return;
+
+  const nextPinnedGroups = new Set(state.pinnedGroups);
+  if (nextPinnedGroups.has(groupName)) {
+    nextPinnedGroups.delete(groupName);
+  } else {
+    nextPinnedGroups.add(groupName);
+  }
+
+  await persistPinnedGroups(nextPinnedGroups);
+  state.pinnedGroups = nextPinnedGroups;
+  render();
+}
 
 async function removeEntry(entry) {
   const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
@@ -853,6 +898,17 @@ function renderEntry(entry) {
   delIcon.setAttribute('aria-hidden', 'true');
   del.appendChild(delIcon);
 
+  const isPinned = entry.pinned === true;
+  const pin = document.createElement('button');
+  pin.className = isPinned ? 'pin-button is-pinned' : 'pin-button';
+  pin.type = 'button';
+  pin.title = isPinned ? 'Unpin' : 'Pin';
+  pin.setAttribute('aria-label', `${isPinned ? 'Unpin' : 'Pin'} ${entry.title}`);
+  const pinIcon = document.createElement('span');
+  pinIcon.className = 'pin-icon';
+  pinIcon.setAttribute('aria-hidden', 'true');
+  pin.appendChild(pinIcon);
+
   const edit = document.createElement('button');
   edit.className = 'edit-title-button';
   edit.type = 'button';
@@ -868,6 +924,7 @@ function renderEntry(entry) {
   openButton.appendChild(meta);
   item.appendChild(openButton);
   if (!state.selectionMode) {
+    item.appendChild(pin);
     item.appendChild(edit);
   }
   item.appendChild(del);
@@ -923,6 +980,11 @@ function renderEntry(entry) {
   });
 
   del.addEventListener('click', () => removeEntry(entry).catch(reportDeleteError));
+  pin.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    return toggleEntryPinned(entry).catch(reportPinError);
+  });
   edit.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1052,6 +1114,8 @@ function renderDomainGroup(group) {
   container.dataset.domain = group.domain;
 
   const isExpanded = state.expandedDomains.has(group.domain);
+  const isPinnedGroup = state.pinnedGroups.has(group.domain);
+  container.classList.toggle('is-pinned', isPinnedGroup);
 
   const header = document.createElement('div');
   header.className = 'domain-group-header';
@@ -1122,34 +1186,55 @@ function renderDomainGroup(group) {
     activateEmptyGroupRemoval(e);
   });
 
-  // Quick actions for the group (only show for non-empty groups)
-  if (group.count > 0) {
+  if (!state.selectionMode) {
     const actions = document.createElement('span');
     actions.className = 'domain-group-actions';
 
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'domain-group-action-btn';
-    toggleBtn.type = 'button';
-    toggleBtn.dataset.domain = group.domain;
+    const pinBtn = document.createElement('button');
+    pinBtn.className = isPinnedGroup ? 'domain-group-action-btn group-pin-button is-pinned' : 'domain-group-action-btn group-pin-button';
+    pinBtn.type = 'button';
+    pinBtn.dataset.domain = group.domain;
+    pinBtn.title = isPinnedGroup ? 'Unpin group' : 'Pin group';
+    pinBtn.setAttribute('aria-label', `${isPinnedGroup ? 'Unpin' : 'Pin'} group ${group.domain}`);
+    const pinIcon = document.createElement('span');
+    pinIcon.className = 'pin-icon';
+    pinIcon.setAttribute('aria-hidden', 'true');
+    pinBtn.appendChild(pinIcon);
+    actions.appendChild(pinBtn);
 
-    const openedTabIds = Array.isArray(state.openedDomainTabs.get(group.domain))
-      ? state.openedDomainTabs.get(group.domain).filter(tabId => Number.isInteger(tabId))
-      : [];
-    const isOpened = openedTabIds.length > 0;
-    toggleBtn.title = isOpened ? `Close all ${tabCountLabel(openedTabIds.length)}` : `Open all ${pageCountLabel(group.count)}`;
-    toggleBtn.setAttribute('aria-label', isOpened ? `Close all ${tabCountLabel(openedTabIds.length)} from ${group.domain}` : `Open all ${pageCountLabel(group.count)} from ${group.domain}`);
-    toggleBtn.innerHTML = isOpened
-      ? '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>'
-      : '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
+    let toggleBtn = null;
+    if (group.count > 0) {
+      toggleBtn = document.createElement('button');
+      toggleBtn.className = 'domain-group-action-btn domain-group-batch-button';
+      toggleBtn.type = 'button';
+      toggleBtn.dataset.domain = group.domain;
 
-    if (isOpened) {
-      toggleBtn.classList.add('is-opened');
+      const openedTabIds = Array.isArray(state.openedDomainTabs.get(group.domain))
+        ? state.openedDomainTabs.get(group.domain).filter(tabId => Number.isInteger(tabId))
+        : [];
+      const isOpened = openedTabIds.length > 0;
+      toggleBtn.title = isOpened ? `Close all ${tabCountLabel(openedTabIds.length)}` : `Open all ${pageCountLabel(group.count)}`;
+      toggleBtn.setAttribute('aria-label', isOpened ? `Close all ${tabCountLabel(openedTabIds.length)} from ${group.domain}` : `Open all ${pageCountLabel(group.count)} from ${group.domain}`);
+      toggleBtn.innerHTML = isOpened
+        ? '<span class="action-icon action-icon-close-all" aria-hidden="true"></span>'
+        : '<span class="action-icon action-icon-open-all" aria-hidden="true"></span>';
+
+      if (isOpened) {
+        toggleBtn.classList.add('is-opened');
+      }
+
+      actions.appendChild(toggleBtn);
     }
-
-    actions.appendChild(toggleBtn);
     header.appendChild(actions);
 
-    toggleBtn.addEventListener('click', async (e) => {
+    pinBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return toggleGroupPinned(group.domain).catch(reportPinError);
+    });
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
 
       // Prevent double-click
@@ -1247,7 +1332,8 @@ function renderDomainGroup(group) {
       } finally {
         toggleBtn.disabled = false;
       }
-    });
+      });
+    }
   }
 
   const contentWrap = document.createElement('div');
@@ -1475,7 +1561,7 @@ function render() {
   } else {
     // Grouped view: group by domain
     const customGroupsForRender = state.query && !state.selectionMode ? [] : state.customGroups;
-    const groups = ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender);
+    const groups = ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender, Array.from(state.pinnedGroups));
     elements = groups.map(group => {
       if (group.type === 'single') {
         return renderEntry(group.entry);

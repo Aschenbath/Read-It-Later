@@ -126,6 +126,9 @@ function normalizeEntry(entry, now = Date.now()) {
   if (source.customTitle === true) {
     normalized.customTitle = true;
   }
+  if (source.pinned === true) {
+    normalized.pinned = true;
+  }
   return normalized;
 }
 
@@ -179,6 +182,11 @@ function mergeRecoveredEntry(current, candidate) {
   } else {
     delete merged.customTitle;
   }
+  if (current.pinned === true || candidate.pinned === true) {
+    merged.pinned = true;
+  } else {
+    delete merged.pinned;
+  }
   return merged;
 }
 
@@ -202,6 +210,8 @@ function normalizeEntries(entries, now = Date.now()) {
 
 function sortEntriesForDisplay(entries) {
   return [...(Array.isArray(entries) ? entries : [])].sort((a, b) => {
+    const pinned = (b.pinned === true ? 1 : 0) - (a.pinned === true ? 1 : 0);
+    if (pinned !== 0) return pinned;
     const updated = (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
     if (updated !== 0) return updated;
     return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
@@ -270,6 +280,25 @@ function upsertEntry(entries, entry) {
   const next = [...list];
   next[index] = merged;
   return { entries: sortEntriesForDisplay(next), changed: true, created: false, entry: merged };
+}
+
+function togglePinnedEntry(entries, id) {
+  const list = normalizeEntries(entries);
+  const index = list.findIndex(entry => entry && String(entry.id) === String(id));
+  if (index < 0) {
+    return { entries: list, changed: false, entry: null };
+  }
+
+  const current = list[index];
+  const nextEntry = { ...current };
+  if (current.pinned === true) {
+    delete nextEntry.pinned;
+  } else {
+    nextEntry.pinned = true;
+  }
+  const next = [...list];
+  next[index] = nextEntry;
+  return { entries: sortEntriesForDisplay(next), changed: true, entry: nextEntry };
 }
 
 function renameEntryTitle(entries, id, title, now = Date.now()) {
@@ -351,7 +380,7 @@ function isSavableTab(tab) {
   return isSavableUrl(tab && tab.url);
 }
 
-function groupEntriesByDomain(entries, customGroups = []) {
+function groupEntriesByDomain(entries, customGroups = [], pinnedGroups = []) {
   const list = Array.isArray(entries) ? entries : [];
   const byDomain = new Map();
   const customGroupNames = [];
@@ -364,6 +393,11 @@ function groupEntriesByDomain(entries, customGroups = []) {
     }
   }
   const customGroupSet = new Set(customGroupNames);
+  const pinnedGroupSet = new Set(
+    (Array.isArray(pinnedGroups) ? pinnedGroups : [])
+      .map(group => cleanText(group))
+      .filter(Boolean)
+  );
 
   for (const entry of list) {
     const domain = entry.domain || 'unknown';
@@ -387,11 +421,15 @@ function groupEntriesByDomain(entries, customGroups = []) {
       groups.push({ type: 'single', entry: items[0] });
     } else {
       // Multiple entries, empty custom groups, or user-created groups: show as group
-      groups.push({ type: 'group', domain, entries: items, count: items.length });
+      const group = { type: 'group', domain, entries: items, count: items.length };
+      if (pinnedGroupSet.has(domain)) {
+        group.pinned = true;
+      }
+      groups.push(group);
     }
   }
 
-  return groups;
+  return groups.sort((a, b) => (b.pinned === true ? 1 : 0) - (a.pinned === true ? 1 : 0));
 }
 
 globalThis.ReadLaterCore = {
@@ -413,6 +451,7 @@ globalThis.ReadLaterCore = {
   normalizeUrl,
   renameEntryTitle,
   sortEntriesForDisplay,
+  togglePinnedEntry,
   upsertEntry
 };
 

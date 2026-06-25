@@ -702,7 +702,7 @@ h1 {
 .entry-open-button {
   width: 100%;
   min-height: 60px;
-  padding: 9px 72px 8px 66px;
+  padding: 9px 98px 8px 66px;
   position: relative;
   display: block;
   border: 1px solid rgba(222, 219, 208, 0.92);
@@ -895,6 +895,36 @@ h1 {
   white-space: nowrap;
 }
 
+.pin-button {
+  position: absolute;
+  top: 14px;
+  right: 60px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8d928f;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+  transition:
+    background 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pin-button.is-pinned {
+  opacity: 1;
+  pointer-events: auto;
+  color: var(--warm);
+}
+
 .edit-title-button {
   position: absolute;
   top: 14px;
@@ -943,12 +973,30 @@ h1 {
     transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.entry-card:hover .pin-button,
+.pin-button:focus-visible,
 .entry-card:hover .edit-title-button,
 .edit-title-button:focus-visible,
 .entry-card:hover .delete-button,
 .delete-button:focus-visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+.pin-button:hover,
+.pin-button:focus-visible {
+  background: #f1eadf;
+  color: var(--warm);
+  outline: none;
+}
+
+.pin-button:focus-visible {
+  outline: 2px solid rgba(201, 137, 66, 0.35);
+  outline-offset: 1px;
+}
+
+.pin-button:active {
+  transform: scale(0.92);
 }
 
 .edit-title-button:hover,
@@ -981,6 +1029,21 @@ h1 {
 
 .delete-button:active {
   transform: scale(0.92);
+}
+
+.pin-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  background: currentColor;
+  transform: rotate(-35deg);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M12 17v5M5 7h14M7.2 7l1.2-4h7.2L16.8 7l-2.6 6.2H9.8L7.2 7Z' fill='none' stroke='black' stroke-width='2.35' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M12 17v5M5 7h14M7.2 7l1.2-4h7.2L16.8 7l-2.6 6.2H9.8L7.2 7Z' fill='none' stroke='black' stroke-width='2.35' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.pin-icon::before,
+.pin-icon::after {
+  content: none;
 }
 
 .edit-title-icon {
@@ -1349,6 +1412,14 @@ h1 {
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
+.domain-group.is-pinned .domain-group-header {
+  border-color: rgba(201, 137, 66, 0.62);
+  box-shadow:
+    0 7px 20px rgba(201, 137, 66, 0.12),
+    0 2px 7px rgba(52, 48, 39, 0.08),
+    inset 0 0 0 1px rgba(201, 137, 66, 0.08);
+}
+
 .domain-group-header.is-delete-armed {
   border-color: rgba(184, 92, 87, 0.7);
   background:
@@ -1486,6 +1557,25 @@ h1 {
     0 4px 12px rgba(79, 155, 133, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
   outline: none;
+}
+
+.group-pin-button {
+  color: #8d928f;
+}
+
+.group-pin-button.is-pinned {
+  border-color: rgba(201, 137, 66, 0.55);
+  background: #fff8eb;
+  color: var(--warm);
+}
+
+.group-pin-button:hover,
+.group-pin-button:focus-visible,
+.group-pin-button.is-pinned:hover,
+.group-pin-button.is-pinned:focus-visible {
+  border-color: var(--warm);
+  background: #f7ead8;
+  color: var(--warm);
 }
 
 .domain-group-action-btn.is-opened {

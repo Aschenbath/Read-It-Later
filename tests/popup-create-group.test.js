@@ -239,6 +239,7 @@ function instrumentPopup(source) {
       '  loadEntries,',
       '  addCurrentPage,',
       '  removeEntry,',
+      '  toggleEntryPinned,',
       '  deleteSelectedEntries,',
       '  toggleViewMode,',
       '  init,',
@@ -1167,6 +1168,113 @@ async function main() {
 
   {
     const { api, storage } = createHarness();
+    const older = ReadLaterCore.buildEntryFromTab({ title: 'Older page', url: 'https://docs.example/older' }, 1000);
+    const newer = ReadLaterCore.buildEntryFromTab({ title: 'Newer page', url: 'https://docs.example/newer' }, 2000);
+    api.state.entries = [newer, older];
+    api.render();
+
+    const olderCard = api.els.entriesList.querySelector(`[data-id="${older.id}"]`);
+    const pinButton = olderCard.querySelector('.pin-button');
+    assert.ok(pinButton, 'entry cards should expose a pin affordance');
+    assert.strictEqual(pinButton.title, 'Pin');
+    assert.strictEqual(pinButton.getAttribute('aria-label'), 'Pin Older page');
+
+    await dispatchAndWait(pinButton, { type: 'click', target: pinButton, bubbles: true });
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].id, older.id, 'pinned entry should persist at the top');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].pinned, true);
+    assert.strictEqual(api.state.entries[0].id, older.id);
+    const pinnedButton = api.els.entriesList.querySelector(`[data-id="${older.id}"]`).querySelector('.pin-button');
+    assert.strictEqual(pinnedButton.classList.contains('is-pinned'), true);
+    assert.strictEqual(pinnedButton.title, 'Unpin');
+    assert.strictEqual(pinnedButton.getAttribute('aria-label'), 'Unpin Older page');
+  }
+
+  {
+    const { api, storage } = createHarness();
+    const older = { ...ReadLaterCore.buildEntryFromTab({ title: 'Older pinned', url: 'https://docs.example/older-pinned' }, 1000), pinned: true };
+    const newer = ReadLaterCore.buildEntryFromTab({ title: 'Newer page', url: 'https://docs.example/newer-page' }, 2000);
+    api.state.entries = ReadLaterCore.sortEntriesForDisplay([older, newer]);
+    api.render();
+
+    const pinButton = api.els.entriesList.querySelector(`[data-id="${older.id}"]`).querySelector('.pin-button');
+    await dispatchAndWait(pinButton, { type: 'click', target: pinButton, bubbles: true });
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].id, newer.id, 'unpinned entry should return to normal timestamp ordering');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][1].id, older.id);
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][1].pinned, undefined);
+    assert.strictEqual(api.state.entries[0].id, newer.id);
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const older = ReadLaterCore.buildEntryFromTab({ title: 'Older page', url: 'https://docs.example/fail-pin' }, 1000);
+    const newer = ReadLaterCore.buildEntryFromTab({ title: 'Newer page', url: 'https://docs.example/fail-newer' }, 2000);
+    api.state.entries = [newer, older];
+    api.render();
+
+    const pinButton = api.els.entriesList.querySelector(`[data-id="${older.id}"]`).querySelector('.pin-button');
+    await dispatchAndWait(pinButton, { type: 'click', target: pinButton, bubbles: true });
+
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined);
+    assert.deepStrictEqual(api.state.entries.map(entry => entry.id), [newer.id, older.id]);
+    assert.strictEqual(api.state.entries.find(entry => entry.id === older.id).pinned, undefined);
+    assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
+  }
+
+  {
+    const { api, storage } = createHarness();
+    const docsEntries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs older', url: 'https://docs.example/older' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs newer', url: 'https://docs.example/newer' }, 2000)
+    ].map(entry => ({ ...entry, domain: 'Docs' }));
+    const newsEntries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'News older', url: 'https://news.example/older' }, 3000),
+      ReadLaterCore.buildEntryFromTab({ title: 'News newer', url: 'https://news.example/newer' }, 4000)
+    ].map(entry => ({ ...entry, domain: 'News' }));
+    api.state.entries = [...newsEntries, ...docsEntries];
+    api.state.viewMode = 'grouped';
+    api.render();
+
+    assert.strictEqual(api.els.entriesList.children[0].dataset.domain, 'News');
+    const docsGroup = api.els.entriesList.querySelector(`[data-domain="Docs"]`);
+    const pinButton = docsGroup.querySelector('.group-pin-button');
+    assert.ok(pinButton, 'group headers should expose a pin affordance');
+    assert.strictEqual(pinButton.title, 'Pin group');
+    assert.strictEqual(pinButton.getAttribute('aria-label'), 'Pin group Docs');
+    assert.ok(pinButton.querySelector('.pin-icon'), 'group pin should use the shared outline pin icon');
+
+    await dispatchAndWait(pinButton, { type: 'click', target: pinButton, bubbles: true });
+
+    assert.deepStrictEqual(Array.from(storage.readLaterPinnedGroups), ['Docs']);
+    assert.strictEqual(api.state.pinnedGroups.has('Docs'), true);
+    assert.strictEqual(api.els.entriesList.children[0].dataset.domain, 'Docs', 'pinned group should render before newer unpinned groups');
+    const pinnedButton = api.els.entriesList.children[0].querySelector('.group-pin-button');
+    assert.strictEqual(pinnedButton.classList.contains('is-pinned'), true);
+    assert.strictEqual(pinnedButton.title, 'Unpin group');
+    assert.strictEqual(pinnedButton.getAttribute('aria-label'), 'Unpin group Docs');
+  }
+
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const docsEntries = [
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs older', url: 'https://docs.example/older-fail' }, 1000),
+      ReadLaterCore.buildEntryFromTab({ title: 'Docs newer', url: 'https://docs.example/newer-fail' }, 2000)
+    ].map(entry => ({ ...entry, domain: 'Docs' }));
+    api.state.entries = docsEntries;
+    api.state.viewMode = 'grouped';
+    api.render();
+
+    const pinButton = api.els.entriesList.querySelector('.group-pin-button');
+    await dispatchAndWait(pinButton, { type: 'click', target: pinButton, bubbles: true });
+
+    assert.strictEqual(storage.readLaterPinnedGroups, undefined);
+    assert.strictEqual(api.state.pinnedGroups.has('Docs'), false);
+    assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
+  }
+
+  {
+    const { api, storage } = createHarness();
     const entry = ReadLaterCore.buildEntryFromTab({
       title: 'Automatically generated PDF from existing images.',
       url: 'file:///F:/2.%20ObsidianNotes/SCAU/stats-review.pdf'
@@ -1288,7 +1396,7 @@ async function main() {
       entries,
       count: entries.length
     });
-    const button = node.querySelector('.domain-group-action-btn');
+    const button = node.querySelector('.domain-group-batch-button');
 
     await dispatchAndWait(button, { type: 'click', target: button });
 
@@ -1319,7 +1427,7 @@ async function main() {
       entries,
       count: entries.length
     });
-    const button = node.querySelector('.domain-group-action-btn');
+    const button = node.querySelector('.domain-group-batch-button');
 
     await dispatchAndWait(button, { type: 'click', target: button });
 
@@ -1343,7 +1451,7 @@ async function main() {
       entries: [entry],
       count: 1
     });
-    const button = node.querySelector('.domain-group-action-btn');
+    const button = node.querySelector('.domain-group-batch-button');
 
     await dispatchAndWait(button, { type: 'click', target: button });
 
@@ -1371,7 +1479,7 @@ async function main() {
       entries: [entry],
       count: 1
     });
-    const button = node.querySelector('.domain-group-action-btn');
+    const button = node.querySelector('.domain-group-batch-button');
 
     await dispatchAndWait(button, { type: 'click', target: button });
 

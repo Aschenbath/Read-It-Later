@@ -156,6 +156,23 @@ assert.deepStrictEqual(normalizeEntry({
   updatedAt: 2
 });
 
+assert.deepStrictEqual(normalizeEntry({
+  title: 'Pinned page',
+  url: 'https://example.com/pinned',
+  pinned: true,
+  createdAt: 1,
+  updatedAt: 2
+}, now), {
+  id: 'https%3A%2F%2Fexample.com%2Fpinned',
+  title: 'Pinned page',
+  url: 'https://example.com/pinned',
+  domain: 'example.com',
+  favIconUrl: '',
+  createdAt: 1,
+  updatedAt: 2,
+  pinned: true
+});
+
 const recoveredEntries = normalizeEntries([
   null,
   0,
@@ -240,6 +257,23 @@ assert.strictEqual(recoveredDuplicate.createdAt, now - 5000);
 assert.strictEqual(recoveredDuplicate.updatedAt, now - 100);
 assert.strictEqual(recoveredDuplicate.favIconUrl, 'https://example.com/new.ico');
 
+const pinnedRecoveredDuplicate = normalizeEntries([
+  {
+    title: 'Pinned older duplicate',
+    url: 'https://example.com/pinned-duplicate#old',
+    pinned: true,
+    createdAt: now - 5000,
+    updatedAt: now - 4000
+  },
+  {
+    title: 'Newest duplicate',
+    url: 'https://example.com/pinned-duplicate#new',
+    createdAt: now - 3000,
+    updatedAt: now - 100
+  }
+], now);
+assert.strictEqual(pinnedRecoveredDuplicate[0].pinned, true);
+
 assert.strictEqual(normalizeEntry({
   title: 'Manual group entry',
   url: 'https://linux.do/t/topic/123',
@@ -286,6 +320,14 @@ assert.strictEqual(upsertedRenamed.entries[0].customTitle, true);
 assert.strictEqual(upsertedRenamed.entries[0].updatedAt, now + 2000);
 assert.strictEqual(upsertedRenamed.entries[0].favIconUrl, 'https://example.com/icon-2.png');
 
+const pinnedUpsert = upsertEntry([
+  { ...existing[0], pinned: true }
+], buildEntryFromTab({
+  title: 'Pinned page updated',
+  url: 'https://example.com/post#again'
+}, now + 2500));
+assert.strictEqual(pinnedUpsert.entries[0].pinned, true);
+
 const manuallyGrouped = [
   {
     ...buildEntryFromTab({ title: 'Linux tip', url: 'https://linux.do/t/topic/123' }, now - 1000),
@@ -315,6 +357,13 @@ const sorted = sortEntriesForDisplay([
 ]).map(entry => entry.id);
 assert.deepStrictEqual(sorted, ['c', 'b', 'a']);
 
+const pinnedSorted = sortEntriesForDisplay([
+  { id: 'old-pinned', title: 'Old pinned', pinned: true, updatedAt: 1 },
+  { id: 'new-normal', title: 'New normal', updatedAt: 100 },
+  { id: 'new-pinned', title: 'New pinned', pinned: true, updatedAt: 50 }
+]).map(entry => entry.id);
+assert.deepStrictEqual(pinnedSorted, ['new-pinned', 'old-pinned', 'new-normal']);
+
 assert.deepStrictEqual(deleteEntry(existing, existing[0].id).entries.map(entry => entry.title), ['Other']);
 assert.strictEqual(deleteEntry(existing, 'missing').changed, false);
 
@@ -342,6 +391,15 @@ const customGroupWithOneEntry = groupEntriesByDomain([
 assert.strictEqual(customGroupWithOneEntry[0].type, 'group');
 assert.strictEqual(customGroupWithOneEntry[0].domain, 'Research');
 assert.strictEqual(customGroupWithOneEntry[0].count, 1);
+
+const groupedWithPinnedDomain = groupEntriesByDomain([
+  { ...buildEntryFromTab({ title: 'Fresh docs', url: 'https://docs.example/fresh' }, now + 3000), domain: 'Docs' },
+  { ...buildEntryFromTab({ title: 'Older docs', url: 'https://docs.example/older' }, now + 1000), domain: 'Docs' },
+  { ...buildEntryFromTab({ title: 'Fresh news', url: 'https://news.example/fresh' }, now + 5000), domain: 'News' },
+  { ...buildEntryFromTab({ title: 'Older news', url: 'https://news.example/older' }, now + 2000), domain: 'News' }
+], [], ['Docs']);
+assert.deepStrictEqual(groupedWithPinnedDomain.map(group => group.domain), ['Docs', 'News']);
+assert.strictEqual(groupedWithPinnedDomain[0].pinned, true);
 
 const manuallyGroupedSearchable = [
   { ...buildEntryFromTab({ title: 'Linux tip', url: 'https://linux.do/t/topic/123' }, now), domain: '小技巧' }

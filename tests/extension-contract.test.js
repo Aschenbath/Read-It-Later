@@ -140,6 +140,39 @@ assert.ok(
     popupJs.includes("input.className = 'entry-title-input'"),
   'entry cards should support inline custom names through the shared rename helper'
 );
+assert.ok(
+  popupJs.includes('ReadLaterCore.togglePinnedEntry') &&
+    popupJs.includes("pin.className = isPinned ? 'pin-button is-pinned' : 'pin-button'") &&
+    popupJs.includes("pinIcon.className = 'pin-icon'"),
+  'entry cards should support pinned entries through a compact icon button'
+);
+const togglePinnedBlock = popupJs.match(/async function toggleEntryPinned\(entry\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  togglePinnedBlock.includes('ReadLaterCore.togglePinnedEntry(state.entries, entry && entry.id)') &&
+    togglePinnedBlock.includes('await setPopupStorage({ [storageKey]: next.entries });') &&
+    togglePinnedBlock.includes('state.entries = next.entries;') &&
+    togglePinnedBlock.indexOf('await setPopupStorage({ [storageKey]: next.entries });') < togglePinnedBlock.indexOf('state.entries = next.entries;'),
+  'pin toggles should treat storage persistence as the commit boundary'
+);
+const toggleGroupPinnedBlock = popupJs.match(/async function toggleGroupPinned\(domain\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  popupJs.includes("const pinnedGroupsStorageKey = 'readLaterPinnedGroups';") &&
+    popupJs.includes('pinnedGroups: new Set()') &&
+    popupJs.includes("pinBtn.className = isPinnedGroup ? 'domain-group-action-btn group-pin-button is-pinned' : 'domain-group-action-btn group-pin-button'") &&
+    popupJs.includes("pinIcon.className = 'pin-icon'"),
+  'group headers should support pinned groups through the shared compact pin icon'
+);
+assert.ok(
+  toggleGroupPinnedBlock.includes('await persistPinnedGroups(nextPinnedGroups);') &&
+    toggleGroupPinnedBlock.includes('state.pinnedGroups = nextPinnedGroups;') &&
+    toggleGroupPinnedBlock.indexOf('await persistPinnedGroups(nextPinnedGroups);') < toggleGroupPinnedBlock.indexOf('state.pinnedGroups = nextPinnedGroups;'),
+  'group pin toggles should treat storage persistence as the commit boundary'
+);
+assert.ok(
+  popupJs.includes("toggleBtn.className = 'domain-group-action-btn domain-group-batch-button';"),
+  'group batch open/close should have a selector distinct from group pin'
+);
+
 assert.ok(popupJs.includes("meta.className = 'entry-meta'"), 'entry cards should render a compact metadata row');
 assert.ok(popupJs.includes('state.currentTabEntry'), 'popup should track the saved entry for the current tab');
 assert.ok(popupJs.includes('function refreshCurrentTabState'), 'popup should refresh current-tab save state');
@@ -244,7 +277,7 @@ assert.ok(
   'normal search should not keep unrelated empty custom groups visible'
 );
 assert.ok(
-  popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender)'),
+  popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender, Array.from(state.pinnedGroups))'),
   'group rendering should include empty user-created groups only when they are useful as visible groups/drop targets'
 );
 assert.ok(
@@ -329,6 +362,13 @@ assert.ok(css.includes('.search-clear-button'), 'search should expose a clear co
 assert.ok(css.includes('.empty-action-button'), 'empty-state should provide an in-context action button');
 assert.ok(css.includes('.entry-open-button'), 'entry open button should be styled as the main card action');
 assert.ok(css.includes('.edit-title-button'), 'entry cards should expose a compact rename icon button');
+assert.ok(css.includes('.pin-button'), 'entry cards should expose a compact pin icon button');
+assert.ok(css.includes('.pin-button.is-pinned'), 'pinned entries should keep their pin affordance visible');
+assert.ok(css.includes('.pin-icon'), 'pin button should use a CSS-drawn icon span');
+assert.ok(css.includes('.group-pin-button'), 'group headers should expose a compact pin icon button');
+assert.ok(css.includes('.domain-group.is-pinned .domain-group-header'), 'pinned groups should have a distinct header state');
+assert.ok(css.includes('.group-pin-button'), 'group headers should expose a compact pin icon button');
+assert.ok(css.includes('.domain-group.is-pinned .domain-group-header'), 'pinned groups should have a distinct header state');
 assert.ok(css.includes('.entry-title-editor'), 'inline title editing should keep a dedicated card editor surface');
 assert.ok(css.includes('.entry-meta'), 'entry metadata should be styled for fast scanning');
 assert.ok(css.includes('.entry-card.is-current-tab'), 'current tab entry should have a distinct visual state');
@@ -556,6 +596,10 @@ assert.ok(!popupJs.includes('del.textContent'), 'delete button should not depend
 assert.ok(!html.includes('\u{1f5d1}'), 'bulk delete button should not depend on an emoji glyph');
 assert.ok(!readme.includes('\u{1f5d1}'), 'README should describe the CSS delete button without promising an emoji glyph');
 assert.ok(popupJs.includes("del.setAttribute('aria-label'"), 'delete button should keep an accessible label');
+assert.ok(popupJs.includes("pin.setAttribute('aria-label'"), 'pin button should keep an accessible label');
+assert.ok(popupJs.includes("pinBtn.setAttribute('aria-label'"), 'group pin button should keep an accessible label');
+assert.ok(!popupJs.includes('pin.textContent'), 'pin button should not depend on a text glyph');
+assert.ok(!popupJs.includes('pinBtn.textContent'), 'group pin button should not depend on a text glyph');
 
 assert.ok(backgroundJs.includes('ReadLaterCore.STORAGE_KEY'), 'background shortcut should use the shared storage key');
 assert.ok(backgroundJs.includes('ReadLaterCore.normalizeEntries'), 'background shortcut should rebuild stored entries through the shared recovery helper');
