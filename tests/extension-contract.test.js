@@ -92,7 +92,7 @@ assert.ok(
   popupJs.includes('renderEmptyState(visible, elements.length)'),
   'render should hide the empty-state when empty custom groups are rendered'
 );
-const enterSelectionModeBlock = popupJs.match(/function enterSelectionMode\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+const enterSelectionModeBlock = popupJs.match(/function enterSelectionMode\(options = \{\}\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(!enterSelectionModeBlock.includes('render();'), 'long-press selection should not render an empty selection state before selecting the pressed entry');
 assert.ok(
   popupJs.includes('async function commitSelectionToGroup'),
@@ -123,7 +123,7 @@ assert.ok(
   'creating or dropping into a group should move selected entries and return to normal mode'
 );
 assert.ok(
-  popupJs.includes('if (state.selectionMode && state.selectedIds.size === 0)') &&
+  popupJs.includes('if (state.selectionMode && state.selectedIds.size === 0 && !state.groupOrganize)') &&
   popupJs.includes('exitSelectionMode();'),
   'deselecting the last selected entry should leave selection mode without a second click'
 );
@@ -736,4 +736,20 @@ assert.ok(
     css.includes('.entry-card.is-drop-after') &&
     css.includes('.domain-group.is-drop-before'),
   'reorder drop should show a CSS insertion-line indicator'
+);
+
+// Long-press a group header to enter organize mode (reorder groups without a loose entry)
+assert.ok(
+  popupJs.includes('groupOrganize: false') &&
+    popupJs.includes('enterSelectionMode({ groupOrganize: true })'),
+  'long-pressing a group header should enter organize mode that persists without a selected entry'
+);
+assert.ok(
+  popupJs.includes('const startHeaderLongPress') &&
+    popupJs.includes("header.addEventListener('mousedown', startHeaderLongPress)"),
+  'group headers should support a long-press gesture to enter organize mode'
+);
+assert.ok(
+  popupJs.includes('state.selectedIds.size === 0 && !state.groupOrganize'),
+  'organize mode entered via a group header should not auto-exit on empty selection'
 );

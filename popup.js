@@ -22,6 +22,7 @@ const state = {
   groupOrder: [],
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
+  groupOrganize: false,
   selectedIds: new Set(),
   pendingGroupSelectedIds: [],
   showCreateGroup: false,
@@ -470,12 +471,15 @@ async function persistGroupOrder(groupOrder = state.groupOrder) {
   await setPopupStorage({ [groupOrderStorageKey]: [...groupOrder] });
 }
 
-function enterSelectionMode() {
+function enterSelectionMode(options = {}) {
   state.selectionMode = true;
   state.selectedIds.clear();
   state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
   state.editingEntryId = null;
+  // Entered by long-pressing a group header (vs an entry): organize mode then
+  // persists without any selected entry so groups can be dragged to reorder.
+  state.groupOrganize = options.groupOrganize === true;
   document.body.classList.add('selection-mode');
 }
 
@@ -485,6 +489,7 @@ function exitSelectionMode() {
   state.pendingGroupSelectedIds = [];
   state.showCreateGroup = false;
   state.editingEntryId = null;
+  state.groupOrganize = false;
   document.body.classList.remove('selection-mode');
   render();
 }
@@ -563,7 +568,7 @@ function toggleSelection(entryId) {
   if (state.selectionMode && state.showCreateGroup) {
     state.pendingGroupSelectedIds = Array.from(state.selectedIds);
   }
-  if (state.selectionMode && state.selectedIds.size === 0) {
+  if (state.selectionMode && state.selectedIds.size === 0 && !state.groupOrganize) {
     exitSelectionMode();
     return;
   }
@@ -900,7 +905,7 @@ async function removeEntry(entry) {
   if (wasSelected) {
     state.selectedIds.delete(entry.id);
     state.pendingGroupSelectedIds = state.pendingGroupSelectedIds.filter(id => id !== entry.id);
-    if (state.selectionMode && state.selectedIds.size === 0) {
+    if (state.selectionMode && state.selectedIds.size === 0 && !state.groupOrganize) {
       exitSelectionMode();
     } else {
       render();
@@ -1642,7 +1647,46 @@ function renderDomainGroup(group) {
     }
   };
 
+  // Long-press a group header (in normal mode) to enter organize mode, so groups
+  // can be reordered without first needing a loose entry to long-press. Organize
+  // mode entered this way persists with no selected entry (state.groupOrganize),
+  // which lets the header be dragged to reorder straight away.
+  let headerLongPressTimer = null;
+  let suppressNextHeaderClick = false;
+  const startHeaderLongPress = (e) => {
+    if (state.selectionMode) return;
+    if (e && e.target && typeof e.target.closest === 'function' &&
+        (e.target.closest('.domain-group-actions') || e.target.closest('.domain-group-chevron'))) {
+      return;
+    }
+    headerLongPressTimer = setTimeout(() => {
+      headerLongPressTimer = null;
+      suppressNextHeaderClick = true;
+      enterSelectionMode({ groupOrganize: true });
+      render();
+    }, 500);
+  };
+  const cancelHeaderLongPress = () => {
+    if (headerLongPressTimer) {
+      clearTimeout(headerLongPressTimer);
+      headerLongPressTimer = null;
+    }
+  };
+  header.addEventListener('mousedown', startHeaderLongPress);
+  header.addEventListener('touchstart', startHeaderLongPress, { passive: true });
+  header.addEventListener('mouseup', cancelHeaderLongPress);
+  header.addEventListener('mouseleave', cancelHeaderLongPress);
+  header.addEventListener('touchend', cancelHeaderLongPress);
+  header.addEventListener('touchcancel', cancelHeaderLongPress);
+  header.addEventListener('mousemove', cancelHeaderLongPress);
+  header.addEventListener('touchmove', cancelHeaderLongPress, { passive: true });
+
   header.addEventListener('click', (e) => {
+    if (suppressNextHeaderClick) {
+      e.preventDefault();
+      suppressNextHeaderClick = false;
+      return;
+    }
     if (e.target.closest('.domain-group-actions')) {
       return;
     }
@@ -1796,7 +1840,7 @@ function renderViewModeButtonState() {
 function render() {
   syncCurrentTabEntry();
 
-  if (state.selectionMode && state.selectedIds.size === 0) {
+  if (state.selectionMode && state.selectedIds.size === 0 && !state.groupOrganize) {
     state.selectionMode = false;
     state.pendingGroupSelectedIds = [];
     state.showCreateGroup = false;
@@ -1860,6 +1904,15 @@ function render() {
       els.deleteSelectedBtn.classList.remove('hidden');
       els.deleteSelectedBtn.title = `Delete ${state.selectedIds.size} selected`;
       els.deleteSelectedBtn.setAttribute('aria-label', `Delete ${state.selectedIds.size} selected`);
+    } else {
+      // Organize mode entered via a group-header long-press: no entry selected,
+      // but keep an explicit exit affordance and a clear label.
+      els.searchInput.value = 'Reorder groups';
+      els.searchInput.disabled = true;
+      els.clearSearchBtn.classList.remove('hidden');
+      els.clearSearchBtn.title = 'Exit organize mode';
+      els.clearSearchBtn.setAttribute('aria-label', 'Exit organize mode');
+      els.deleteSelectedBtn.classList.add('hidden');
     }
   } else {
     // Normal mode

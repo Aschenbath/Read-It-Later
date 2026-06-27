@@ -1651,6 +1651,24 @@ async function main() {
     assert.deepStrictEqual(Array.from(api.state.entryOrder), [], 'failed reorder must not mutate the in-memory order');
     assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
   }
+
+  // Long-pressing a group header enters organize mode that persists without a selected entry.
+  {
+    const { api } = createHarness();
+    const entries = [
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'A', url: 'https://docs.example/a' }, 1000), domain: 'Docs' },
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'B', url: 'https://docs.example/b' }, 2000), domain: 'Docs' }
+    ];
+    api.state.entries = entries;
+    api.state.viewMode = 'grouped';
+    api.render();
+    const header = api.els.entriesList.querySelector('.domain-group-header');
+    header.dispatchEvent({ type: 'mousedown', target: header, bubbles: true });
+    assert.strictEqual(api.state.selectionMode, true, 'long-pressing a group header enters organize mode');
+    assert.strictEqual(api.state.groupOrganize, true, 'header long-press keeps organize mode open with no selected entry');
+    assert.strictEqual(api.els.searchInput.value, 'Reorder groups', 'group-organize mode shows a reorder label');
+    assert.strictEqual(api.els.clearSearchBtn.classList.contains('hidden'), false, 'group-organize mode keeps a visible exit button');
+  }
 }
 
 main().catch((error) => {
