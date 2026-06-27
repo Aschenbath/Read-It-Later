@@ -668,3 +668,26 @@ assert.strictEqual(
   1,
   'business storage writes should go through setPopupStorage; chromeSet should only be awaited by the echo-guard wrapper'
 );
+
+// Drag auto-scroll near the popup edges (long-press drag-to-group reachability)
+assert.ok(
+  popupJs.includes('const dragAutoScroll = {') &&
+    popupJs.includes('const DRAG_SCROLL_EDGE_PX = 64;') &&
+    popupJs.includes('container.scrollTop += this.velocity;'),
+  'dragging a selected card should auto-scroll the popup when the pointer nears its top/bottom edge'
+);
+assert.ok(
+  popupJs.includes('dragAutoScroll.start();') &&
+    popupJs.includes('dragAutoScroll.stop();') &&
+    popupJs.includes('dragAutoScroll.track(event.clientY);'),
+  'auto-scroll should start on card drag, track the pointer via dragover, and stop when the drag ends'
+);
+assert.ok(
+  popupJs.includes("els.app = (typeof document.querySelector === 'function') ? document.querySelector('.app') : null;"),
+  'popup should cache the .app scroll container so drag auto-scroll can move the whole-popup scroller'
+);
+assert.ok(
+  popupJs.includes("document.addEventListener('dragover'") &&
+    popupJs.includes("document.addEventListener('dragleave'"),
+  'a document-level dragover/dragleave pair should drive and bound edge auto-scroll during native drag'
+);

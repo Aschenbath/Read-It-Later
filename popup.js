@@ -35,6 +35,71 @@ const GROUP_CARD_STAGGER_MS = 60;
 const GROUP_CARD_STAGGER_LIMIT = 8;
 const GROUP_CONTENT_CLOSE_MS = 300;
 
+// Drag auto-scroll: while dragging a selected card toward the top/bottom edge
+// of the popup, scroll the .app container in that direction so a target group
+// that sits off-screen can be reached without stopping to scroll the touchpad
+// mid-drag. Native HTML5 dragover only fires on pointer movement, so the actual
+// scrolling runs on its own rAF loop driven by the last tracked pointer Y; this
+// keeps scrolling even when the pointer is held still inside an edge zone.
+const DRAG_SCROLL_EDGE_PX = 64;
+const DRAG_SCROLL_MAX_SPEED = 16;
+const dragAutoScroll = {
+  rafId: null,
+  velocity: 0,
+  active: false,
+  start() {
+    if (!state.selectionMode) return;
+    this.active = true;
+    this.velocity = 0;
+    if (this.rafId === null && typeof requestAnimationFrame === 'function') {
+      this.rafId = requestAnimationFrame(() => this.step());
+    }
+  },
+  track(clientY) {
+    if (!this.active || typeof clientY !== 'number' || Number.isNaN(clientY)) {
+      return;
+    }
+    const container = els.app;
+    if (!container || typeof container.getBoundingClientRect !== 'function') {
+      this.velocity = 0;
+      return;
+    }
+    const rect = container.getBoundingClientRect();
+    const topZone = rect.top + DRAG_SCROLL_EDGE_PX;
+    const bottomZone = rect.bottom - DRAG_SCROLL_EDGE_PX;
+    if (clientY < topZone) {
+      const depth = Math.min(topZone - clientY, DRAG_SCROLL_EDGE_PX);
+      this.velocity = -DRAG_SCROLL_MAX_SPEED * (depth / DRAG_SCROLL_EDGE_PX);
+    } else if (clientY > bottomZone) {
+      const depth = Math.min(clientY - bottomZone, DRAG_SCROLL_EDGE_PX);
+      this.velocity = DRAG_SCROLL_MAX_SPEED * (depth / DRAG_SCROLL_EDGE_PX);
+    } else {
+      this.velocity = 0;
+    }
+  },
+  step() {
+    if (!this.active) {
+      this.rafId = null;
+      return;
+    }
+    const container = els.app;
+    if (container && this.velocity !== 0) {
+      container.scrollTop += this.velocity;
+    }
+    this.rafId = typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame(() => this.step())
+      : null;
+  },
+  stop() {
+    this.active = false;
+    this.velocity = 0;
+    if (this.rafId !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.rafId);
+    }
+    this.rafId = null;
+  }
+};
+
 function byId(id) {
   return document.getElementById(id);
 }
@@ -999,11 +1064,13 @@ function renderEntry(entry) {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', entry.id);
       item.classList.add('is-dragging');
+      dragAutoScroll.start();
     }
   });
 
   item.addEventListener('dragend', () => {
     item.classList.remove('is-dragging');
+    dragAutoScroll.stop();
   });
 
   return item;
@@ -1723,6 +1790,19 @@ function bind() {
     }, 150);
   });
 
+  // Auto-scroll the popup while dragging a selected card near its top/bottom
+  // edges so an off-screen target group can be reached mid-drag.
+  document.addEventListener('dragover', (event) => {
+    dragAutoScroll.track(event.clientY);
+  });
+  document.addEventListener('drop', () => dragAutoScroll.stop());
+  document.addEventListener('dragend', () => dragAutoScroll.stop());
+  document.addEventListener('dragleave', (event) => {
+    if (!event.relatedTarget) {
+      dragAutoScroll.velocity = 0;
+    }
+  });
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       if (state.selectionMode) {
@@ -1805,6 +1885,7 @@ function init() {
   els.emptyState = byId('emptyState');
   els.emptyTitle = byId('emptyTitle');
   els.statusText = byId('statusText');
+  els.app = (typeof document.querySelector === 'function') ? document.querySelector('.app') : null;
   document.body.classList.toggle('flat-view', state.viewMode === 'flat');
   renderViewModeButtonState();
   bind();
