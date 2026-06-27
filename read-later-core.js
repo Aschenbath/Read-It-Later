@@ -218,6 +218,71 @@ function sortEntriesForDisplay(entries) {
   });
 }
 
+function orderIndexMap(orderedKeys) {
+  const map = new Map();
+  const list = Array.isArray(orderedKeys) ? orderedKeys : [];
+  for (const value of list) {
+    const key = String(value);
+    if (!map.has(key)) {
+      map.set(key, map.size);
+    }
+  }
+  return map;
+}
+
+// Display comparator honouring a manual order list: pinned first, then entries
+// NOT in the manual order (freshly saved) by updatedAt desc so new saves surface
+// on top, then manually ordered entries by their stored index.
+function compareEntriesByManualOrder(a, b, indexMap) {
+  const pinned = (b.pinned === true ? 1 : 0) - (a.pinned === true ? 1 : 0);
+  if (pinned !== 0) return pinned;
+  const ai = indexMap.has(String(a.id)) ? indexMap.get(String(a.id)) : -1;
+  const bi = indexMap.has(String(b.id)) ? indexMap.get(String(b.id)) : -1;
+  const aListed = ai >= 0;
+  const bListed = bi >= 0;
+  if (aListed !== bListed) return aListed ? 1 : -1;
+  if (aListed && bListed) return ai - bi;
+  const updated = (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0);
+  if (updated !== 0) return updated;
+  return (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0);
+}
+
+function orderEntriesByManual(entries, entryOrder = []) {
+  const indexMap = orderIndexMap(entryOrder);
+  return [...(Array.isArray(entries) ? entries : [])]
+    .sort((a, b) => compareEntriesByManualOrder(a, b, indexMap));
+}
+
+// Move one or more ids to a new position relative to a target id. Returns a new
+// deduped id array. Dropping with no/own/unknown target appends the moved ids.
+function reorderIds(orderedIds, movedIds, targetId, position) {
+  const base = (Array.isArray(orderedIds) ? orderedIds : []).map(String);
+  const moved = (Array.isArray(movedIds) ? movedIds : [movedIds])
+    .map(value => (value == null ? '' : String(value)))
+    .filter(Boolean);
+  const movedSet = new Set(moved);
+  const seen = new Set();
+  const remaining = [];
+  for (const id of base) {
+    if (movedSet.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    remaining.push(id);
+  }
+  const target = targetId == null ? null : String(targetId);
+  let insertAt = remaining.length;
+  if (target !== null && !movedSet.has(target)) {
+    const targetIndex = remaining.indexOf(target);
+    if (targetIndex >= 0) {
+      insertAt = position === 'after' ? targetIndex + 1 : targetIndex;
+    }
+  }
+  return [...remaining.slice(0, insertAt), ...moved, ...remaining.slice(insertAt)];
+}
+
+function reorderGroupKeys(orderedKeys, movedKey, targetKey, position) {
+  return reorderIds(orderedKeys, [movedKey], targetKey, position);
+}
+
 function formatSavedAt(value, now = Date.now()) {
   const timestamp = Number(value);
   const current = Number(now);
@@ -380,7 +445,7 @@ function isSavableTab(tab) {
   return isSavableUrl(tab && tab.url);
 }
 
-function groupEntriesByDomain(entries, customGroups = [], pinnedGroups = []) {
+function groupEntriesByDomain(entries, customGroups = [], pinnedGroups = [], options = {}) {
   const list = Array.isArray(entries) ? entries : [];
   const byDomain = new Map();
   const customGroupNames = [];
@@ -429,7 +494,39 @@ function groupEntriesByDomain(entries, customGroups = [], pinnedGroups = []) {
     }
   }
 
-  return groups.sort((a, b) => (b.pinned === true ? 1 : 0) - (a.pinned === true ? 1 : 0));
+  const groupOrder = options && Array.isArray(options.groupOrder) ? options.groupOrder : [];
+  const entryOrder = options && Array.isArray(options.entryOrder) ? options.entryOrder : [];
+
+  // Sort entries inside each group by the manual entry order (falls back to
+  // updatedAt desc for entries with no manual position, e.g. fresh saves).
+  const entryIndexMap = orderIndexMap(entryOrder);
+  for (const group of groups) {
+    if (group.type === 'group') {
+      group.entries = [...group.entries]
+        .sort((a, b) => compareEntriesByManualOrder(a, b, entryIndexMap));
+    }
+  }
+
+  // Sort the top-level groups: pinned groups first, then manually ordered groups
+  // by their stored index, then everything else (including singles) keeping the
+  // existing first-appearance order via an explicit stable index.
+  const groupKeyIndex = orderIndexMap(groupOrder);
+  return groups
+    .map((group, idx) => ({ group, idx }))
+    .sort((a, b) => {
+      const pinned = (b.group.pinned === true ? 1 : 0) - (a.group.pinned === true ? 1 : 0);
+      if (pinned !== 0) return pinned;
+      const ak = a.group.type === 'group' ? String(a.group.domain) : null;
+      const bk = b.group.type === 'group' ? String(b.group.domain) : null;
+      const ai = ak !== null && groupKeyIndex.has(ak) ? groupKeyIndex.get(ak) : -1;
+      const bi = bk !== null && groupKeyIndex.has(bk) ? groupKeyIndex.get(bk) : -1;
+      const aListed = ai >= 0;
+      const bListed = bi >= 0;
+      if (aListed !== bListed) return aListed ? -1 : 1;
+      if (aListed && bListed) return ai - bi;
+      return a.idx - b.idx;
+    })
+    .map(item => item.group);
 }
 
 globalThis.ReadLaterCore = {
@@ -449,7 +546,10 @@ globalThis.ReadLaterCore = {
   normalizeEntries,
   normalizeEntry,
   normalizeUrl,
+  orderEntriesByManual,
   renameEntryTitle,
+  reorderGroupKeys,
+  reorderIds,
   sortEntriesForDisplay,
   togglePinnedEntry,
   upsertEntry

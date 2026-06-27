@@ -252,12 +252,13 @@ assert.ok(
 assert.ok(popupJs.includes("viewMode: 'flat'"), 'flat list should be the default until grouped summaries are explicitly requested');
 assert.ok(popupJs.includes("document.body.classList.toggle('flat-view', state.viewMode === 'flat')"), 'default flat view should be reflected on the popup body');
 assert.ok(
-  popupJs.includes("const effectiveViewMode = state.selectionMode ? 'grouped' : state.viewMode"),
-  'selection/classification mode should render grouped view so newly created groups are visible as drop targets'
+  popupJs.includes('const effectiveViewMode = state.viewMode;'),
+  'organize/selection mode should follow the current view (flat reorders the linear list, grouped reorders/classifies)'
 );
 assert.ok(
-  popupJs.includes("document.body.classList.toggle('flat-view', !state.selectionMode && state.viewMode === 'flat')"),
-  'selection/classification mode should not keep flat-view presentation active'
+  !popupJs.includes("state.selectionMode ? 'grouped' : state.viewMode") &&
+    !popupJs.includes("!state.selectionMode && state.viewMode === 'flat'"),
+  'organize mode should no longer force grouped view; flat-view organize must reorder the flat list'
 );
 assert.ok(popupJs.includes('readLaterExpandedDomains'), 'expanded group state should be stored under a stable key');
 assert.ok(popupJs.includes('readLaterViewMode'), 'grouped/flat view mode should be stored under a stable key');
@@ -277,8 +278,9 @@ assert.ok(
   'normal search should not keep unrelated empty custom groups visible'
 );
 assert.ok(
-  popupJs.includes('ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender, Array.from(state.pinnedGroups))'),
-  'group rendering should include empty user-created groups only when they are useful as visible groups/drop targets'
+  popupJs.includes('ReadLaterCore.groupEntriesByDomain(') &&
+    popupJs.includes('{ groupOrder: state.groupOrder, entryOrder: state.entryOrder }'),
+  'group rendering should pass the manual group/entry order into groupEntriesByDomain'
 );
 assert.ok(
   popupJs.includes('const isExpanded = state.expandedDomains.has(group.domain);'),
@@ -690,4 +692,48 @@ assert.ok(
   popupJs.includes("document.addEventListener('dragover'") &&
     popupJs.includes("document.addEventListener('dragleave'"),
   'a document-level dragover/dragleave pair should drive and bound edge auto-scroll during native drag'
+);
+
+// Manual reorder: drag groups + entries (flat and within-group) in organize mode
+assert.ok(
+  popupJs.includes("const entryOrderStorageKey = 'readLaterEntryOrder';") &&
+    popupJs.includes("const groupOrderStorageKey = 'readLaterGroupOrder';"),
+  'manual entry/group order should persist under stable storage keys'
+);
+assert.ok(
+  popupJs.includes('function persistEntryOrder') && popupJs.includes('function persistGroupOrder'),
+  'manual order should be persisted through dedicated setPopupStorage helpers'
+);
+assert.ok(
+  popupJs.includes('async function commitEntryReorder') &&
+    popupJs.includes('async function commitGroupReorder') &&
+    popupJs.includes('ReadLaterCore.reorderIds(') &&
+    popupJs.includes('ReadLaterCore.reorderGroupKeys('),
+  'reordering should commit through the shared core reorder helpers'
+);
+assert.ok(
+  popupJs.includes('ReadLaterCore.orderEntriesByManual('),
+  'flat view should honour the manual entry order'
+);
+assert.ok(
+  popupJs.includes('header.draggable = true'),
+  'group headers should be draggable to reorder groups in organize mode'
+);
+const reorderCommitBlock = popupJs.match(/async function commitEntryReorder\([\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  reorderCommitBlock.includes('await persistEntryOrder(nextOrder);') &&
+    reorderCommitBlock.includes('state.entryOrder = nextOrder;') &&
+    reorderCommitBlock.indexOf('await persistEntryOrder(nextOrder);') < reorderCommitBlock.indexOf('state.entryOrder = nextOrder;'),
+  'entry reorder should treat the storage write as the commit boundary'
+);
+const reloadGuardBlock = popupJs.match(/function shouldReloadFromStorageChange\([\s\S]*?\n\}/)?.[0] || '';
+assert.ok(
+  reloadGuardBlock.includes('entryOrderStorageKey') && reloadGuardBlock.includes('groupOrderStorageKey'),
+  'storage reload guard should react to external order changes'
+);
+assert.ok(
+  css.includes('.entry-card.is-drop-before') &&
+    css.includes('.entry-card.is-drop-after') &&
+    css.includes('.domain-group.is-drop-before'),
+  'reorder drop should show a CSS insertion-line indicator'
 );

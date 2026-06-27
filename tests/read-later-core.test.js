@@ -12,7 +12,10 @@ const {
   normalizeEntries,
   normalizeEntry,
   normalizeUrl,
+  orderEntriesByManual,
   renameEntryTitle,
+  reorderGroupKeys,
+  reorderIds,
   sortEntriesForDisplay,
   upsertEntry
 } = require('../read-later-core');
@@ -406,3 +409,65 @@ const manuallyGroupedSearchable = [
 ];
 assert.deepStrictEqual(filterEntries(manuallyGroupedSearchable, '@linux').map(entry => entry.title), ['Linux tip']);
 assert.deepStrictEqual(filterEntries(manuallyGroupedSearchable, '@小技巧').map(entry => entry.title), ['Linux tip']);
+
+// --- Manual ordering: flat view (orderEntriesByManual) ---
+const orderingEntries = [
+  { id: 'a', title: 'A', updatedAt: 10 },
+  { id: 'b', title: 'B', updatedAt: 30 },
+  { id: 'c', title: 'C', updatedAt: 20 },
+  { id: 'p', title: 'Pinned', updatedAt: 5, pinned: true }
+];
+// No manual order: pinned first, then updatedAt desc.
+assert.deepStrictEqual(orderEntriesByManual(orderingEntries, []).map(e => e.id), ['p', 'b', 'c', 'a']);
+// Manual order: pinned first, then by the stored index.
+assert.deepStrictEqual(orderEntriesByManual(orderingEntries, ['c', 'a', 'b']).map(e => e.id), ['p', 'c', 'a', 'b']);
+// A freshly saved (unlisted) entry surfaces above the manually ordered ones.
+const orderingWithFresh = [...orderingEntries, { id: 'fresh', title: 'Fresh', updatedAt: 999 }];
+assert.deepStrictEqual(
+  orderEntriesByManual(orderingWithFresh, ['c', 'a', 'b']).map(e => e.id),
+  ['p', 'fresh', 'c', 'a', 'b']
+);
+
+// --- Manual ordering: group order via options.groupOrder ---
+const groupOrderEntries = [
+  { ...buildEntryFromTab({ title: 'D1', url: 'https://docs.example/1' }, now + 1000), domain: 'Docs' },
+  { ...buildEntryFromTab({ title: 'D2', url: 'https://docs.example/2' }, now + 2000), domain: 'Docs' },
+  { ...buildEntryFromTab({ title: 'N1', url: 'https://news.example/1' }, now + 3000), domain: 'News' },
+  { ...buildEntryFromTab({ title: 'N2', url: 'https://news.example/2' }, now + 4000), domain: 'News' },
+  { ...buildEntryFromTab({ title: 'B1', url: 'https://blog.example/1' }, now + 5000), domain: 'Blog' },
+  { ...buildEntryFromTab({ title: 'B2', url: 'https://blog.example/2' }, now + 6000), domain: 'Blog' }
+];
+// No options: first-appearance order is preserved (backward compatible).
+assert.deepStrictEqual(groupEntriesByDomain(groupOrderEntries).map(g => g.domain), ['Docs', 'News', 'Blog']);
+// groupOrder pulls listed groups to the front by index; unlisted keep first-appearance.
+assert.deepStrictEqual(
+  groupEntriesByDomain(groupOrderEntries, [], [], { groupOrder: ['Blog', 'Docs'] }).map(g => g.domain),
+  ['Blog', 'Docs', 'News']
+);
+// Pinned groups still win over the manual group order.
+assert.deepStrictEqual(
+  groupEntriesByDomain(groupOrderEntries, [], ['News'], { groupOrder: ['Blog', 'Docs'] }).map(g => g.domain),
+  ['News', 'Blog', 'Docs']
+);
+
+// --- Manual ordering: within-group entry order via options.entryOrder ---
+const withinGroupEntries = [
+  { ...buildEntryFromTab({ title: 'First', url: 'https://docs.example/first' }, now + 1000), domain: 'Docs', id: 'first' },
+  { ...buildEntryFromTab({ title: 'Second', url: 'https://docs.example/second' }, now + 2000), domain: 'Docs', id: 'second' },
+  { ...buildEntryFromTab({ title: 'Third', url: 'https://docs.example/third' }, now + 3000), domain: 'Docs', id: 'third' }
+];
+// Default: within-group by updatedAt desc.
+assert.deepStrictEqual(groupEntriesByDomain(withinGroupEntries)[0].entries.map(e => e.id), ['third', 'second', 'first']);
+// entryOrder reorders entries inside the group.
+assert.deepStrictEqual(
+  groupEntriesByDomain(withinGroupEntries, [], [], { entryOrder: ['first', 'second', 'third'] })[0].entries.map(e => e.id),
+  ['first', 'second', 'third']
+);
+
+// --- reorderIds / reorderGroupKeys ---
+assert.deepStrictEqual(reorderIds(['a', 'b', 'c', 'd'], ['b'], 'd', 'after'), ['a', 'c', 'd', 'b']);
+assert.deepStrictEqual(reorderIds(['a', 'b', 'c', 'd'], ['d'], 'a', 'before'), ['d', 'a', 'b', 'c']);
+assert.deepStrictEqual(reorderIds(['a', 'b', 'c', 'd'], ['a', 'b'], 'd', 'before'), ['c', 'a', 'b', 'd']);
+assert.deepStrictEqual(reorderIds(['a', 'b', 'c'], ['b'], 'missing', 'before'), ['a', 'c', 'b']);
+assert.deepStrictEqual(reorderIds(['a', 'b', 'c'], ['b'], 'b', 'before'), ['a', 'c', 'b']);
+assert.deepStrictEqual(reorderGroupKeys(['Docs', 'News', 'Blog'], 'Blog', 'Docs', 'before'), ['Blog', 'Docs', 'News']);

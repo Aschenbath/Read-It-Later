@@ -1569,6 +1569,88 @@ async function main() {
     assert.strictEqual(api.state.isTransitioningMode, false, 'failed view-mode transition should release its guard');
     assert.strictEqual(api.els.viewModeBtn.disabled, false, 'failed view-mode transition should re-enable the toggle');
   }
+
+  // In-group entry reorder writes the manual entry order.
+  {
+    const { api, storage } = createHarness();
+    const entries = [
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'One', url: 'https://docs.example/1' }, 1000), domain: 'Docs', id: 'one' },
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'Two', url: 'https://docs.example/2' }, 2000), domain: 'Docs', id: 'two' },
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'Three', url: 'https://docs.example/3' }, 3000), domain: 'Docs', id: 'three' }
+    ];
+    api.state.entries = entries;
+    api.state.viewMode = 'grouped';
+    api.state.expandedDomains.add('Docs');
+    api.state.selectionMode = true;
+    api.state.selectedIds.add('three');
+    api.render();
+
+    const cards = api.els.entriesList.querySelectorAll('.entry-card');
+    const dragged = Array.from(cards).find(card => card.dataset.id === 'three');
+    const target = Array.from(cards).find(card => card.dataset.id === 'one');
+    const dataTransfer = { effectAllowed: '', dropEffect: '', setData() {} };
+    dragged.dispatchEvent({ type: 'dragstart', target: dragged, dataTransfer });
+    await dispatchAndWait(target, { type: 'drop', target, dataTransfer });
+
+    // Display order is updatedAt desc (three, two, one); dropping three after one -> two, one, three.
+    assert.deepStrictEqual(Array.from(storage.readLaterEntryOrder), ['two', 'one', 'three'], 'in-group reorder should persist the new entry order');
+    assert.deepStrictEqual(Array.from(api.state.entryOrder), ['two', 'one', 'three']);
+  }
+
+  // Group-header drag reorders the groups.
+  {
+    const { api, storage } = createHarness();
+    const docs = [
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'D1', url: 'https://docs.example/1' }, 1000), domain: 'Docs' },
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'D2', url: 'https://docs.example/2' }, 2000), domain: 'Docs' }
+    ];
+    const news = [
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'N1', url: 'https://news.example/1' }, 3000), domain: 'News' },
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'N2', url: 'https://news.example/2' }, 4000), domain: 'News' }
+    ];
+    api.state.entries = [...news, ...docs];
+    api.state.viewMode = 'grouped';
+    api.state.selectionMode = true;
+    api.state.selectedIds.add(docs[0].id);
+    api.render();
+
+    const groups = Array.from(api.els.entriesList.querySelectorAll('.domain-group'));
+    const docsHeader = groups.find(g => g.dataset.domain === 'Docs').querySelector('.domain-group-header');
+    const newsHeader = groups.find(g => g.dataset.domain === 'News').querySelector('.domain-group-header');
+    const dataTransfer = { effectAllowed: '', dropEffect: '', setData() {} };
+    newsHeader.dispatchEvent({ type: 'dragstart', target: newsHeader, dataTransfer });
+    await dispatchAndWait(docsHeader, { type: 'drop', target: docsHeader, dataTransfer });
+
+    // Display order is News, Docs; dropping News after Docs -> Docs, News.
+    assert.deepStrictEqual(Array.from(storage.readLaterGroupOrder), ['Docs', 'News'], 'header drag should persist the new group order');
+    assert.deepStrictEqual(Array.from(api.state.groupOrder), ['Docs', 'News']);
+  }
+
+  // A failed reorder write keeps the manual order unchanged and surfaces the error.
+  {
+    const { api, storage } = createHarness({ setError: 'Storage write failed' });
+    const entries = [
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'One', url: 'https://docs.example/1' }, 1000), domain: 'Docs', id: 'one' },
+      { ...ReadLaterCore.buildEntryFromTab({ title: 'Two', url: 'https://docs.example/2' }, 2000), domain: 'Docs', id: 'two' }
+    ];
+    api.state.entries = entries;
+    api.state.viewMode = 'grouped';
+    api.state.expandedDomains.add('Docs');
+    api.state.selectionMode = true;
+    api.state.selectedIds.add('two');
+    api.render();
+
+    const cards = api.els.entriesList.querySelectorAll('.entry-card');
+    const dragged = Array.from(cards).find(card => card.dataset.id === 'two');
+    const target = Array.from(cards).find(card => card.dataset.id === 'one');
+    const dataTransfer = { effectAllowed: '', dropEffect: '', setData() {} };
+    dragged.dispatchEvent({ type: 'dragstart', target: dragged, dataTransfer });
+    await dispatchAndWait(target, { type: 'drop', target, dataTransfer });
+
+    assert.strictEqual(storage.readLaterEntryOrder, undefined, 'failed reorder must not persist the order');
+    assert.deepStrictEqual(Array.from(api.state.entryOrder), [], 'failed reorder must not mutate the in-memory order');
+    assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
+  }
 }
 
 main().catch((error) => {

@@ -5,6 +5,8 @@ const expandedDomainsStorageKey = 'readLaterExpandedDomains';
 const viewModeStorageKey = 'readLaterViewMode';
 const customGroupsStorageKey = 'readLaterCustomGroups';
 const pinnedGroupsStorageKey = 'readLaterPinnedGroups';
+const entryOrderStorageKey = 'readLaterEntryOrder';
+const groupOrderStorageKey = 'readLaterGroupOrder';
 const state = {
   entries: [],
   query: '',
@@ -16,6 +18,8 @@ const state = {
   emptyGroupDeleteArmed: new Set(),
   customGroups: [],
   pinnedGroups: new Set(),
+  entryOrder: [],
+  groupOrder: [],
   openedDomainTabs: new Map(), // domain -> array of tab IDs
   selectionMode: false,
   selectedIds: new Set(),
@@ -48,7 +52,7 @@ const dragAutoScroll = {
   velocity: 0,
   active: false,
   start() {
-    if (!state.selectionMode) return;
+    if (!state.selectionMode || !els.app) return;
     this.active = true;
     this.velocity = 0;
     if (this.rafId === null && typeof requestAnimationFrame === 'function') {
@@ -99,6 +103,94 @@ const dragAutoScroll = {
     this.rafId = null;
   }
 };
+
+// Drag-to-reorder (organize mode): an entry drag reorders cards within their own
+// list (a group, or the flat list); a group-header drag reorders the groups. The
+// active drag is tracked here so a header can tell an entry drop (reclassify)
+// apart from a group drop (reorder), and so cross-list entry drops are ignored.
+const activeDrag = { kind: null, entryIds: [], groupKey: null, context: null };
+let lastDropTarget = null;
+
+function setDropIndicator(element, position) {
+  if (lastDropTarget && lastDropTarget !== element) {
+    lastDropTarget.classList.remove('is-drop-before', 'is-drop-after');
+  }
+  element.classList.remove('is-drop-before', 'is-drop-after');
+  element.classList.add(position === 'after' ? 'is-drop-after' : 'is-drop-before');
+  lastDropTarget = element;
+}
+
+function clearDropIndicator() {
+  if (lastDropTarget) {
+    lastDropTarget.classList.remove('is-drop-before', 'is-drop-after');
+    lastDropTarget = null;
+  }
+}
+
+function dropPositionFromPointer(element, clientY) {
+  if (!element || typeof element.getBoundingClientRect !== 'function' || typeof clientY !== 'number') {
+    return 'after';
+  }
+  const rect = element.getBoundingClientRect();
+  return (clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
+}
+
+// Reorder context for an entry card: the group domain when inside a group,
+// '__flat__' for a flat-view top-level card, or null when not reorderable (a
+// grouped-view top-level single keeps its default placement in v1).
+function entryReorderContext(card) {
+  const groupEl = card && typeof card.closest === 'function' ? card.closest('.domain-group') : null;
+  if (groupEl) {
+    return groupEl.dataset && groupEl.dataset.domain ? groupEl.dataset.domain : '';
+  }
+  return state.viewMode === 'flat' ? '__flat__' : null;
+}
+
+function domEntryOrder() {
+  if (!els.entriesList || typeof els.entriesList.querySelectorAll !== 'function') return [];
+  return Array.from(els.entriesList.querySelectorAll('.entry-card'))
+    .map(card => (card.dataset ? card.dataset.id : ''))
+    .filter(Boolean);
+}
+
+function domGroupOrder() {
+  if (!els.entriesList || typeof els.entriesList.querySelectorAll !== 'function') return [];
+  return Array.from(els.entriesList.querySelectorAll('.domain-group'))
+    .map(node => (node.dataset ? node.dataset.domain : ''))
+    .filter(Boolean);
+}
+
+async function commitEntryReorder(targetEntryId, position) {
+  const movedIds = activeDrag.entryIds.map(String).filter(Boolean);
+  if (!movedIds.length || targetEntryId == null || movedIds.includes(String(targetEntryId))) {
+    return;
+  }
+  const nextOrder = ReadLaterCore.reorderIds(domEntryOrder(), movedIds, targetEntryId, position);
+  try {
+    await persistEntryOrder(nextOrder);
+  } catch (error) {
+    setStatus(error && error.message ? error.message : 'Could not save order');
+    return;
+  }
+  state.entryOrder = nextOrder;
+  render();
+}
+
+async function commitGroupReorder(targetGroupKey, position) {
+  const movedKey = activeDrag.groupKey;
+  if (!movedKey || targetGroupKey == null || movedKey === String(targetGroupKey)) {
+    return;
+  }
+  const nextOrder = ReadLaterCore.reorderGroupKeys(domGroupOrder(), movedKey, targetGroupKey, position);
+  try {
+    await persistGroupOrder(nextOrder);
+  } catch (error) {
+    setStatus(error && error.message ? error.message : 'Could not save group order');
+    return;
+  }
+  state.groupOrder = nextOrder;
+  render();
+}
 
 function byId(id) {
   return document.getElementById(id);
@@ -235,6 +327,8 @@ function shouldReloadFromStorageChange(changes, areaName) {
     expandedDomainsStorageKey,
     viewModeStorageKey,
     pinnedGroupsStorageKey,
+    entryOrderStorageKey,
+    groupOrderStorageKey,
     'openedDomainTabs'
   ].forEach(key => {
     if (changes[key] && !consumeStorageEcho(key, changes[key])) {
@@ -297,7 +391,9 @@ async function loadEntries() {
     [expandedDomainsStorageKey]: [],
     [viewModeStorageKey]: 'flat',
     [customGroupsStorageKey]: [],
-    [pinnedGroupsStorageKey]: []
+    [pinnedGroupsStorageKey]: [],
+    [entryOrderStorageKey]: [],
+    [groupOrderStorageKey]: []
   });
   state.entries = ReadLaterCore.normalizeEntries(result[storageKey]);
 
@@ -317,6 +413,12 @@ async function loadEntries() {
       : []
   );
   state.viewMode = result[viewModeStorageKey] === 'grouped' ? 'grouped' : 'flat';
+  state.entryOrder = Array.isArray(result[entryOrderStorageKey])
+    ? result[entryOrderStorageKey].map(id => String(id)).filter(Boolean)
+    : [];
+  state.groupOrder = Array.isArray(result[groupOrderStorageKey])
+    ? result[groupOrderStorageKey].map(key => ReadLaterCore.cleanText(key)).filter(Boolean)
+    : [];
 
   let currentTabError = null;
   try {
@@ -358,6 +460,14 @@ async function persistCustomGroups() {
 
 async function persistPinnedGroups(pinnedGroups = state.pinnedGroups) {
   await setPopupStorage({ [pinnedGroupsStorageKey]: Array.from(pinnedGroups) });
+}
+
+async function persistEntryOrder(entryOrder = state.entryOrder) {
+  await setPopupStorage({ [entryOrderStorageKey]: [...entryOrder] });
+}
+
+async function persistGroupOrder(groupOrder = state.groupOrder) {
+  await setPopupStorage({ [groupOrderStorageKey]: [...groupOrder] });
 }
 
 function enterSelectionMode() {
@@ -1064,13 +1174,50 @@ function renderEntry(entry) {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', entry.id);
       item.classList.add('is-dragging');
+      activeDrag.kind = 'entry';
+      activeDrag.entryIds = Array.from(state.selectedIds);
+      activeDrag.groupKey = null;
+      activeDrag.context = entryReorderContext(item);
       dragAutoScroll.start();
     }
   });
 
   item.addEventListener('dragend', () => {
     item.classList.remove('is-dragging');
+    activeDrag.kind = null;
+    activeDrag.entryIds = [];
+    activeDrag.context = null;
+    clearDropIndicator();
     dragAutoScroll.stop();
+  });
+
+  // Drop target for reordering entries within the same list (a group, or flat).
+  // Cross-list drops are ignored here; moving a card to another group goes
+  // through the group header (reclassify) instead.
+  item.addEventListener('dragover', (e) => {
+    if (activeDrag.kind !== 'entry' || activeDrag.entryIds.includes(entry.id)) return;
+    const context = entryReorderContext(item);
+    if (context === null || context !== activeDrag.context) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    setDropIndicator(item, dropPositionFromPointer(item, e.clientY));
+  });
+
+  item.addEventListener('dragleave', () => {
+    if (lastDropTarget === item) clearDropIndicator();
+  });
+
+  item.addEventListener('drop', (e) => {
+    if (activeDrag.kind !== 'entry' || activeDrag.entryIds.includes(entry.id)) return;
+    const context = entryReorderContext(item);
+    if (context === null || context !== activeDrag.context) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const position = dropPositionFromPointer(item, e.clientY);
+    clearDropIndicator();
+    return commitEntryReorder(entry.id, position).catch((error) => {
+      setStatus(error && error.message ? error.message : 'Could not save order');
+    });
   });
 
   return item;
@@ -1523,22 +1670,62 @@ function renderDomainGroup(group) {
   container.appendChild(header);
   container.appendChild(contentWrap);
 
-  // Drop zone for dragging entries to this group
+  // Selection mode: the header is draggable to reorder groups, and is a drop
+  // target both for reclassifying entries (entry drag) and reordering groups
+  // (group-header drag).
+  if (state.selectionMode) {
+    header.draggable = true;
+    header.addEventListener('dragstart', (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', `group:${group.domain}`);
+      activeDrag.kind = 'group';
+      activeDrag.groupKey = group.domain;
+      activeDrag.entryIds = [];
+      activeDrag.context = null;
+      container.classList.add('is-dragging');
+      dragAutoScroll.start();
+    });
+    header.addEventListener('dragend', () => {
+      container.classList.remove('is-dragging');
+      activeDrag.kind = null;
+      activeDrag.groupKey = null;
+      clearDropIndicator();
+      dragAutoScroll.stop();
+    });
+  }
+
   header.addEventListener('dragover', (e) => {
-    if (state.selectionMode && state.selectedIds.size > 0) {
+    if (activeDrag.kind === 'entry' && state.selectedIds.size > 0) {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
       header.classList.add('is-drag-over');
+      return;
+    }
+    if (activeDrag.kind === 'group' && activeDrag.groupKey !== group.domain) {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      setDropIndicator(container, dropPositionFromPointer(header, e.clientY));
     }
   });
 
   header.addEventListener('dragleave', () => {
     header.classList.remove('is-drag-over');
+    if (lastDropTarget === container) clearDropIndicator();
   });
 
   header.addEventListener('drop', async (e) => {
     e.preventDefault();
     header.classList.remove('is-drag-over');
+    if (activeDrag.kind === 'group') {
+      const position = dropPositionFromPointer(header, e.clientY);
+      clearDropIndicator();
+      try {
+        await commitGroupReorder(group.domain, position);
+      } catch (error) {
+        setStatus(error && error.message ? error.message : 'Could not save group order');
+      }
+      return;
+    }
     if (state.selectionMode && state.selectedIds.size > 0) {
       try {
         await commitSelectionToGroup(group.domain);
@@ -1615,20 +1802,29 @@ function render() {
     state.showCreateGroup = false;
     document.body.classList.remove('selection-mode');
   }
-  document.body.classList.toggle('flat-view', !state.selectionMode && state.viewMode === 'flat');
+  document.body.classList.toggle('flat-view', state.viewMode === 'flat');
 
   const visible = ReadLaterCore.filterEntries(ReadLaterCore.sortEntriesForDisplay(state.entries), state.query);
-  state.visibleEntries = visible;
 
   let elements;
-  const effectiveViewMode = state.selectionMode ? 'grouped' : state.viewMode;
+  // Organize (selection) mode follows the current view: flat view reorders the
+  // linear list, grouped view reorders within/between groups and classifies.
+  const effectiveViewMode = state.viewMode;
   if (effectiveViewMode === 'flat') {
-    // Flat view: render all entries directly without grouping
-    elements = visible.map(entry => renderEntry(entry));
+    // Flat view: render all entries directly, honouring the manual flat order.
+    const orderedFlat = ReadLaterCore.orderEntriesByManual(visible, state.entryOrder);
+    state.visibleEntries = orderedFlat;
+    elements = orderedFlat.map(entry => renderEntry(entry));
   } else {
-    // Grouped view: group by domain
+    state.visibleEntries = visible;
+    // Grouped view: group by domain, honouring manual group + within-group order
     const customGroupsForRender = state.query && !state.selectionMode ? [] : state.customGroups;
-    const groups = ReadLaterCore.groupEntriesByDomain(visible, customGroupsForRender, Array.from(state.pinnedGroups));
+    const groups = ReadLaterCore.groupEntriesByDomain(
+      visible,
+      customGroupsForRender,
+      Array.from(state.pinnedGroups),
+      { groupOrder: state.groupOrder, entryOrder: state.entryOrder }
+    );
     elements = groups.map(group => {
       if (group.type === 'single') {
         return renderEntry(group.entry);

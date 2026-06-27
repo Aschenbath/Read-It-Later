@@ -595,6 +595,69 @@ h1 {
   box-shadow: 0 6px 18px rgba(79, 155, 133, 0.25);
 }
 
+/* Drag-to-reorder: grab cursor on draggable group headers, dragged-group fade,
+   and a 2px accent insertion line in the gap before/after the drop target. */
+.selection-mode .domain-group-header {
+  cursor: grab;
+}
+
+.selection-mode .domain-group-header:active {
+  cursor: grabbing;
+}
+
+.domain-group.is-dragging {
+  opacity: 0.5;
+}
+
+.entry-card.is-drop-before::after,
+.entry-card.is-drop-after::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(79, 155, 133, 0.5);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.entry-card.is-drop-before::after {
+  top: -5px;
+}
+
+.entry-card.is-drop-after::after {
+  bottom: -5px;
+}
+
+.domain-group.is-drop-before,
+.domain-group.is-drop-after {
+  position: relative;
+}
+
+.domain-group.is-drop-before::before,
+.domain-group.is-drop-after::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(79, 155, 133, 0.5);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.domain-group.is-drop-before::before {
+  top: -5px;
+}
+
+.domain-group.is-drop-after::before {
+  bottom: -5px;
+}
+
 .add-button.is-selection-mode {
   border-color: #6aa690;
   background: #fffdf8;
