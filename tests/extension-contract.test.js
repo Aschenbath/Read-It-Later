@@ -753,6 +753,6 @@ assert.ok(
 );
 assert.ok(
   popupJs.includes("if (effectiveViewMode === 'grouped' && visible.length > 0)") &&
-    popupJs.includes('elements.unshift(renderCreateGroupItem())'),
+    popupJs.includes('elements.push(renderCreateGroupItem())'),
   'modeless: a Create-new-group row is always offered in grouped view'
 );

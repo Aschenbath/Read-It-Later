@@ -695,18 +695,18 @@ h1 {
 
 /* Create new group inline item */
 .create-group-item {
-  margin-bottom: 10px;
+  margin: 4px 0 6px;
 }
 
 .create-group-button {
   width: 100%;
-  min-height: 54px;
-  padding: 12px 18px;
-  border: 2px dashed var(--accent);
-  border-radius: 12px;
-  background: rgba(79, 155, 133, 0.06);
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 1.5px dashed var(--accent);
+  border-radius: 10px;
+  background: rgba(79, 155, 133, 0.05);
   color: var(--accent);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -749,13 +749,13 @@ h1 {
 
 .create-group-input {
   width: 100%;
-  min-height: 54px;
-  padding: 12px 18px;
+  min-height: 40px;
+  padding: 9px 16px;
   border: 2px solid var(--accent);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--surface);
   color: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   outline: none;
 }
@@ -967,8 +967,9 @@ h1 {
 
 .pin-button {
   position: absolute;
-  top: 14px;
+  top: 50%;
   right: 60px;
+  transform: translateY(-50%);
   width: 24px;
   height: 24px;
   padding: 0;
@@ -997,8 +998,9 @@ h1 {
 
 .edit-title-button {
   position: absolute;
-  top: 14px;
+  top: 50%;
   right: 34px;
+  transform: translateY(-50%);
   width: 24px;
   height: 24px;
   padding: 0;
@@ -1021,8 +1023,9 @@ h1 {
 
 .delete-button {
   position: absolute;
-  top: 14px;
+  top: 50%;
   right: 8px;
+  transform: translateY(-50%);
   width: 24px;
   height: 24px;
   padding: 0;
@@ -1066,7 +1069,7 @@ h1 {
 }
 
 .pin-button:active {
-  transform: scale(0.92);
+  transform: translateY(-50%) scale(0.92);
 }
 
 .edit-title-button:hover,
@@ -1082,7 +1085,7 @@ h1 {
 }
 
 .edit-title-button:active {
-  transform: scale(0.92);
+  transform: translateY(-50%) scale(0.92);
 }
 
 .delete-button:hover,
@@ -1098,7 +1101,7 @@ h1 {
 }
 
 .delete-button:active {
-  transform: scale(0.92);
+  transform: translateY(-50%) scale(0.92);
 }
 
 .pin-icon {
@@ -1117,61 +1120,21 @@ h1 {
 }
 
 .edit-title-icon {
-  position: relative;
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
   display: block;
-}
-
-.edit-title-icon::before {
-  content: "";
-  position: absolute;
-  left: 2px;
-  top: 7px;
-  width: 10px;
-  height: 3px;
-  border-radius: 999px;
   background: currentColor;
-  transform: rotate(-38deg);
-}
-
-.edit-title-icon::after {
-  content: "";
-  position: absolute;
-  left: 1px;
-  bottom: 1px;
-  width: 4px;
-  height: 4px;
-  border-left: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(7deg);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .delete-icon {
-  position: relative;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   display: block;
-}
-
-.delete-icon::before,
-.delete-icon::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 0;
-  width: 2px;
-  height: 12px;
-  border-radius: 999px;
   background: currentColor;
-}
-
-.delete-icon::before {
-  transform: rotate(45deg);
-}
-
-.delete-icon::after {
-  transform: rotate(-45deg);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6L18 18M18 6L6 18' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6L18 18M18 6L6 18' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .entry-title-editor {
@@ -1263,42 +1226,20 @@ h1 {
 
 .save-title-icon,
 .cancel-title-icon {
-  position: relative;
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   display: block;
-}
-
-.save-title-icon::before {
-  content: "";
-  position: absolute;
-  left: 2px;
-  top: 6px;
-  width: 9px;
-  height: 5px;
-  border-left: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(-45deg);
-}
-
-.cancel-title-icon::before,
-.cancel-title-icon::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 0;
-  width: 2px;
-  height: 13px;
-  border-radius: 999px;
   background: currentColor;
 }
 
-.cancel-title-icon::before {
-  transform: rotate(45deg);
+.save-title-icon {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M5 13l4 4L19 7' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M5 13l4 4L19 7' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-.cancel-title-icon::after {
-  transform: rotate(-45deg);
+.cancel-title-icon {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6L18 18M18 6L6 18' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6L18 18M18 6L6 18' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .empty-state {

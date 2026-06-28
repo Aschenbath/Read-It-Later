@@ -1185,7 +1185,7 @@ function renderCreateGroupItem() {
   const button = document.createElement('button');
   button.className = 'create-group-button';
   button.type = 'button';
-  button.textContent = '+ Create new group...';
+  button.textContent = '+ New group';
 
   const inputWrap = document.createElement('div');
   inputWrap.className = 'create-group-input-wrap hidden';
@@ -1790,10 +1790,10 @@ function render() {
     });
   }
 
-  // Always offer a "Create new group" row at the top of grouped view, so new
+  // Always offer a compact "New group" row at the bottom of grouped view, so new
   // groups can be made (and dragged into) without any mode.
   if (effectiveViewMode === 'grouped' && visible.length > 0) {
-    elements.unshift(renderCreateGroupItem());
+    elements.push(renderCreateGroupItem());
   }
 
   els.entriesList.replaceChildren(...elements);
