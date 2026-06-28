@@ -59,7 +59,7 @@ button {
   height: 615px;
   min-width: 380px;
   min-height: 615px;
-  padding: 20px 16px 12px;
+  padding: 21px 16px 13px;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: none;
@@ -73,14 +73,14 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 38px;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
+  gap: 13px;
+  margin-bottom: 13px;
 }
 
 h1 {
   margin: 0;
   color: var(--ink);
-  font-size: 25px;
+  font-size: 23px;
   line-height: 1.08;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -94,7 +94,7 @@ h1 {
   display: grid;
   place-items: center;
   border: 1px solid #1c2f2a;
-  border-radius: 12px;
+  border-radius: 13px;
   background: var(--accent);
   color: var(--accent-ink);
   cursor: pointer;
@@ -202,7 +202,7 @@ h1 {
 .search-wrap {
   position: relative;
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 13px;
 }
 
 .view-mode-button {
@@ -289,7 +289,7 @@ h1 {
   height: 38px;
   padding: 0 39px 0 38px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 13px;
   background: rgba(255, 253, 248, 0.9);
   color: #2d3438;
   font-size: 14px;
@@ -457,14 +457,14 @@ h1 {
 .list-shell {
   position: relative;
   overflow: visible;
-  border-radius: 12px;
+  border-radius: 13px;
 }
 
 .entries-list {
   overflow-y: visible;
   overflow-x: visible;
   overflow-anchor: none;
-  padding: 0 2px 12px 0;
+  padding: 0 2px 13px 0;
 }
 
 /* Hide scrollbar for Chrome/Safari/Opera */
@@ -776,7 +776,7 @@ h1 {
   position: relative;
   display: block;
   border: 1px solid rgba(222, 219, 208, 0.92);
-  border-radius: 12px;
+  border-radius: 13px;
   background: var(--surface);
   color: inherit;
   text-align: left;
@@ -959,7 +959,7 @@ h1 {
 
 .entry-saved-at {
   color: var(--accent);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.2;
   font-weight: 700;
   white-space: nowrap;
@@ -1145,7 +1145,7 @@ h1 {
   display: flex;
   align-items: center;
   border: 1px solid #b8cfc5;
-  border-radius: 12px;
+  border-radius: 13px;
   background: #fffefb;
   box-shadow:
     0 0 0 3px rgba(79, 155, 133, 0.12),
@@ -1367,20 +1367,20 @@ h1 {
 }
 
 .domain-group {
-  margin-bottom: 14px;
+  margin-bottom: 13px;
   position: relative;
 }
 
 .domain-group-header {
   width: 100%;
-  min-height: 68px;
-  padding: 12px 52px 12px 14px;
+  min-height: 60px;
+  padding: 10px 52px 10px 13px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 13px;
   position: relative;
   border: 1px solid rgba(207, 203, 191, 0.8);
-  border-radius: 12px;
+  border-radius: 13px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(247, 244, 236, 0.95) 100%),
     var(--surface);
@@ -1466,7 +1466,7 @@ h1 {
 
 .domain-group-name {
   color: #2d3942;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 750;
   line-height: 1.25;
   white-space: nowrap;
