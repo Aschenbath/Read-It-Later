@@ -53,7 +53,7 @@ const dragAutoScroll = {
   velocity: 0,
   active: false,
   start() {
-    if (!state.selectionMode || !els.app) return;
+    if (!els.app) return;
     this.active = true;
     this.velocity = 0;
     if (this.rafId === null && typeof requestAnimationFrame === 'function') {
@@ -1019,12 +1019,10 @@ function renderEntry(entry) {
     item.style.animation = 'entryIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1)';
   }
 
-  // Make entry draggable in selection mode
-  if (state.selectionMode && state.selectedIds.has(entry.id)) {
-    item.draggable = true;
-  }
+  // Modeless: every card is draggable (click opens, drag reorders/classifies).
+  item.draggable = true;
 
-  if (!state.selectionMode && state.editingEntryId === entry.id) {
+  if (state.editingEntryId === entry.id) {
     item.classList.add('is-editing-title');
     item.appendChild(renderEntryTitleEditor(entry));
     return item;
@@ -1109,55 +1107,7 @@ function renderEntry(entry) {
   }
   item.appendChild(del);
 
-  // Long press detection
-  let longPressTimer = null;
-  let touchMoved = false;
-  let suppressNextClickAfterLongPress = false;
-
-  const startLongPress = (e) => {
-    if (state.selectionMode) return;
-    touchMoved = false;
-    longPressTimer = setTimeout(() => {
-      suppressNextClickAfterLongPress = true;
-      enterSelectionMode();
-      toggleSelection(entry.id);
-    }, 500);
-  };
-
-  const cancelLongPress = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    }
-  };
-
-  const handleMove = () => {
-    touchMoved = true;
-    cancelLongPress();
-  };
-
-  openButton.addEventListener('mousedown', startLongPress);
-  openButton.addEventListener('touchstart', startLongPress, { passive: true });
-  openButton.addEventListener('mouseup', cancelLongPress);
-  openButton.addEventListener('mouseleave', cancelLongPress);
-  openButton.addEventListener('touchend', cancelLongPress);
-  openButton.addEventListener('touchcancel', cancelLongPress);
-  openButton.addEventListener('mousemove', handleMove);
-  openButton.addEventListener('touchmove', handleMove, { passive: true });
-
-  openButton.addEventListener('click', (e) => {
-    if (suppressNextClickAfterLongPress) {
-      e.preventDefault();
-      suppressNextClickAfterLongPress = false;
-      return;
-    }
-    if (state.selectionMode) {
-      e.preventDefault();
-      toggleSelection(entry.id);
-    } else if (!touchMoved) {
-      return openEntry(entry).catch(reportOpenEntryError);
-    }
-  });
+  openButton.addEventListener('click', () => openEntry(entry).catch(reportOpenEntryError));
 
   del.addEventListener('click', () => removeEntry(entry).catch(reportDeleteError));
   pin.addEventListener('click', (event) => {
@@ -1173,18 +1123,18 @@ function renderEntry(entry) {
     focusTitleEditor(entry.id);
   });
 
-  // Drag events for selection mode
+  // Modeless drag: any card starts a single-entry drag (reorder or classify).
   item.addEventListener('dragstart', (e) => {
-    if (state.selectionMode && state.selectedIds.has(entry.id)) {
+    if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', entry.id);
-      item.classList.add('is-dragging');
-      activeDrag.kind = 'entry';
-      activeDrag.entryIds = Array.from(state.selectedIds);
-      activeDrag.groupKey = null;
-      activeDrag.context = entryReorderContext(item);
-      dragAutoScroll.start();
     }
+    item.classList.add('is-dragging');
+    activeDrag.kind = 'entry';
+    activeDrag.entryIds = [entry.id];
+    activeDrag.groupKey = null;
+    activeDrag.context = entryReorderContext(item);
+    dragAutoScroll.start();
   });
 
   item.addEventListener('dragend', () => {
@@ -1228,10 +1178,7 @@ function renderEntry(entry) {
   return item;
 }
 
-function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
-  const pendingSelectedIds = Array.isArray(selectedIds)
-    ? selectedIds.filter(Boolean)
-    : [];
+function renderCreateGroupItem() {
   const item = document.createElement('div');
   item.className = 'create-group-item';
 
@@ -1252,11 +1199,13 @@ function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
   item.appendChild(button);
   item.appendChild(inputWrap);
 
-  // Drop zone for creating new group
+  // An entry dropped here is moved into the new group once it is named.
+  let droppedEntryId = null;
+
   button.addEventListener('dragover', (e) => {
-    if (state.selectionMode && state.selectedIds.size > 0) {
+    if (activeDrag.kind === 'entry') {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
       button.classList.add('is-drag-over');
     }
   });
@@ -1268,6 +1217,7 @@ function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
   button.addEventListener('drop', (e) => {
     e.preventDefault();
     button.classList.remove('is-drag-over');
+    droppedEntryId = activeDrag.kind === 'entry' ? activeDrag.entryIds[0] : null;
     // Show input on drop
     button.classList.add('hidden');
     inputWrap.classList.remove('hidden');
@@ -1275,6 +1225,7 @@ function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
   });
 
   button.addEventListener('click', () => {
+    droppedEntryId = null;
     button.classList.add('hidden');
     inputWrap.classList.remove('hidden');
     input.focus();
@@ -1290,10 +1241,10 @@ function renderCreateGroupItem(selectedIds = state.pendingGroupSelectedIds) {
         const targetDomain = ReadLaterCore.cleanText(groupName);
 
         try {
-          if (pendingSelectedIds.length > 0) {
-            await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });
+          if (droppedEntryId) {
+            await commitSelectionToGroup(targetDomain, { selectedIds: [droppedEntryId] });
           } else {
-            // No selection: just create empty group as drop target
+            // No dragged entry: just create an empty group as a drop target
             await createCustomGroup(groupName);
           }
         } catch (error) {
@@ -1647,46 +1598,31 @@ function renderDomainGroup(group) {
     }
   };
 
-  // Long-press a group header (in normal mode) to enter organize mode, so groups
-  // can be reordered without first needing a loose entry to long-press. Organize
-  // mode entered this way persists with no selected entry (state.groupOrganize),
-  // which lets the header be dragged to reorder straight away.
-  let headerLongPressTimer = null;
-  let suppressNextHeaderClick = false;
-  const startHeaderLongPress = (e) => {
-    if (state.selectionMode) return;
-    if (e && e.target && typeof e.target.closest === 'function' &&
-        (e.target.closest('.domain-group-actions') || e.target.closest('.domain-group-chevron'))) {
-      return;
+  // Modeless: the header is draggable to reorder groups (a click still expands;
+  // the native drag threshold separates click from drag), and is a drop target
+  // for an entry drag (reclassify) and a group drag (reorder).
+  header.draggable = true;
+  header.addEventListener('dragstart', (e) => {
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', `group:${group.domain}`);
     }
-    headerLongPressTimer = setTimeout(() => {
-      headerLongPressTimer = null;
-      suppressNextHeaderClick = true;
-      enterSelectionMode({ groupOrganize: true });
-      render();
-    }, 500);
-  };
-  const cancelHeaderLongPress = () => {
-    if (headerLongPressTimer) {
-      clearTimeout(headerLongPressTimer);
-      headerLongPressTimer = null;
-    }
-  };
-  header.addEventListener('mousedown', startHeaderLongPress);
-  header.addEventListener('touchstart', startHeaderLongPress, { passive: true });
-  header.addEventListener('mouseup', cancelHeaderLongPress);
-  header.addEventListener('mouseleave', cancelHeaderLongPress);
-  header.addEventListener('touchend', cancelHeaderLongPress);
-  header.addEventListener('touchcancel', cancelHeaderLongPress);
-  header.addEventListener('mousemove', cancelHeaderLongPress);
-  header.addEventListener('touchmove', cancelHeaderLongPress, { passive: true });
+    activeDrag.kind = 'group';
+    activeDrag.groupKey = group.domain;
+    activeDrag.entryIds = [];
+    activeDrag.context = null;
+    container.classList.add('is-dragging');
+    dragAutoScroll.start();
+  });
+  header.addEventListener('dragend', () => {
+    container.classList.remove('is-dragging');
+    activeDrag.kind = null;
+    activeDrag.groupKey = null;
+    clearDropIndicator();
+    dragAutoScroll.stop();
+  });
 
   header.addEventListener('click', (e) => {
-    if (suppressNextHeaderClick) {
-      e.preventDefault();
-      suppressNextHeaderClick = false;
-      return;
-    }
     if (e.target.closest('.domain-group-actions')) {
       return;
     }
@@ -1714,32 +1650,8 @@ function renderDomainGroup(group) {
   container.appendChild(header);
   container.appendChild(contentWrap);
 
-  // Selection mode: the header is draggable to reorder groups, and is a drop
-  // target both for reclassifying entries (entry drag) and reordering groups
-  // (group-header drag).
-  if (state.selectionMode) {
-    header.draggable = true;
-    header.addEventListener('dragstart', (e) => {
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', `group:${group.domain}`);
-      activeDrag.kind = 'group';
-      activeDrag.groupKey = group.domain;
-      activeDrag.entryIds = [];
-      activeDrag.context = null;
-      container.classList.add('is-dragging');
-      dragAutoScroll.start();
-    });
-    header.addEventListener('dragend', () => {
-      container.classList.remove('is-dragging');
-      activeDrag.kind = null;
-      activeDrag.groupKey = null;
-      clearDropIndicator();
-      dragAutoScroll.stop();
-    });
-  }
-
   header.addEventListener('dragover', (e) => {
-    if (activeDrag.kind === 'entry' && state.selectedIds.size > 0) {
+    if (activeDrag.kind === 'entry') {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
       header.classList.add('is-drag-over');
@@ -1770,9 +1682,9 @@ function renderDomainGroup(group) {
       }
       return;
     }
-    if (state.selectionMode && state.selectedIds.size > 0) {
+    if (activeDrag.kind === 'entry' && activeDrag.entryIds.length > 0) {
       try {
-        await commitSelectionToGroup(group.domain);
+        await commitSelectionToGroup(group.domain, { selectedIds: activeDrag.entryIds });
       } catch (error) {
         setStatus(error && error.message ? error.message : 'Could not move pages');
       }
@@ -1878,13 +1790,10 @@ function render() {
     });
   }
 
-  // Insert "Create new group" item at the top in selection mode
-  if (state.selectionMode && state.showCreateGroup && state.selectedIds.size > 0) {
-    if (!state.pendingGroupSelectedIds.length) {
-      state.pendingGroupSelectedIds = Array.from(state.selectedIds);
-    }
-    const createGroupItem = renderCreateGroupItem(state.pendingGroupSelectedIds);
-    elements.unshift(createGroupItem);
+  // Always offer a "Create new group" row at the top of grouped view, so new
+  // groups can be made (and dragged into) without any mode.
+  if (effectiveViewMode === 'grouped' && visible.length > 0) {
+    elements.unshift(renderCreateGroupItem());
   }
 
   els.entriesList.replaceChildren(...elements);

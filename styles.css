@@ -658,6 +658,13 @@ h1 {
   bottom: -5px;
 }
 
+/* Modeless: highlight a group header when an entry is dragged over it to classify. */
+.domain-group-header.is-drag-over {
+  background: rgba(79, 155, 133, 0.18);
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px rgba(79, 155, 133, 0.25);
+}
+
 .add-button.is-selection-mode {
   border-color: #6aa690;
   background: #fffdf8;

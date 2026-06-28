@@ -113,7 +113,7 @@ assert.ok(
 );
 assert.ok(
   popupJs.includes('const selectedIds = options.selectedIds') &&
-  popupJs.includes('await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });'),
+  popupJs.includes('await commitSelectionToGroup(targetDomain, { selectedIds: [droppedEntryId] });'),
   'create-group Enter should commit the frozen selected-id snapshot instead of rereading live selection state'
 );
 assert.ok(
@@ -212,9 +212,9 @@ assert.ok(popupJs.includes("event.key === 'ArrowUp'"), 'keyboard navigation shou
 assert.ok(popupJs.includes("event.key === 'Delete'"), 'keyboard navigation should support Delete on focused entries');
 assert.ok(popupJs.includes("openButton.className = 'entry-open-button'"), 'entry open action should be separated from delete action');
 assert.ok(popupJs.includes("item.classList.toggle('is-current-tab'"), 'current tab entry should be highlighted');
-assert.ok(popupJs.includes('suppressNextClickAfterLongPress'), 'long press selection should not be immediately undone by the follow-up click event');
-assert.ok(popupJs.includes("openButton.addEventListener('mouseleave', cancelLongPress)"), 'long press should cancel when the pointer leaves the entry');
-assert.ok(popupJs.includes("openButton.addEventListener('touchcancel', cancelLongPress)"), 'long press should cancel on touchcancel');
+assert.ok(!popupJs.includes('suppressNextClickAfterLongPress'), 'modeless: the entry long-press gesture should be gone');
+assert.ok(popupJs.includes('item.draggable = true;'), 'modeless: every entry card should be draggable for reorder/classify');
+assert.ok(popupJs.includes("openButton.addEventListener('click', () => openEntry(entry)"), 'modeless: clicking a card just opens it');
 assert.ok(!popupJs.includes('entry.timestamp'), 'entry insertion animation should use stored created/updated timestamps, not a missing timestamp field');
 const deleteSelectedBlock = popupJs.match(/async function deleteSelectedEntries\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(
@@ -269,7 +269,7 @@ assert.ok(popupJs.includes('function persistExpandedDomains'), 'expanded/collaps
 assert.ok(popupJs.includes('function persistViewMode'), 'grouped/flat view choice should be persisted after toggles');
 assert.ok(popupJs.includes('function persistCustomGroups'), 'user-created groups should be persisted after creation');
 assert.ok(popupJs.includes('async function createCustomGroup'), 'create-group input should still support creating an empty group when nothing is selected');
-assert.ok(popupJs.includes('await commitSelectionToGroup(targetDomain, { selectedIds: pendingSelectedIds });'), 'pressing Enter with selected entries should move them into the new group immediately');
+assert.ok(popupJs.includes("droppedEntryId = activeDrag.kind === 'entry' ? activeDrag.entryIds[0] : null;"), 'modeless: dropping an entry on the create-group row captures it so naming the group moves it in');
 assert.ok(!popupJs.includes('prompt('), 'manual grouping should use the inline create-group input, not a browser prompt');
 const createCustomGroupBlock = popupJs.match(/async function createCustomGroup\(groupName\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert.ok(!createCustomGroupBlock.includes('state.expandedDomains.add(targetDomain);'), 'empty custom group creation should not persist an expanded empty panel');
@@ -297,7 +297,7 @@ assert.ok(
 const groupDropBlock = popupJs.match(/header\.addEventListener\('drop', async \(e\) => \{[\s\S]*?\n  \}\);/)?.[0] || '';
 assert.ok(
   groupDropBlock.includes('try {') &&
-    groupDropBlock.includes('await commitSelectionToGroup(group.domain);') &&
+    groupDropBlock.includes('await commitSelectionToGroup(group.domain, { selectedIds: activeDrag.entryIds });') &&
     groupDropBlock.includes('catch (error)') &&
     groupDropBlock.includes('Could not move pages'),
   'drop-to-group should catch storage failures and surface them instead of leaving an unhandled rejection'
@@ -323,7 +323,7 @@ assert.ok(
   'empty group header body clicks should not expand or delete the group'
 );
 assert.ok(
-  popupJs.includes('await commitSelectionToGroup(group.domain);'),
+  popupJs.includes('await commitSelectionToGroup(group.domain, { selectedIds: activeDrag.entryIds });'),
   'dropping selected entries onto an existing group should move them and return to normal mode'
 );
 assert.ok(
@@ -738,18 +738,21 @@ assert.ok(
   'reorder drop should show a CSS insertion-line indicator'
 );
 
-// Long-press a group header to enter organize mode (reorder groups without a loose entry)
+// Modeless: no long-press / no selection mode; cards and headers are directly draggable
 assert.ok(
-  popupJs.includes('groupOrganize: false') &&
-    popupJs.includes('enterSelectionMode({ groupOrganize: true })'),
-  'long-pressing a group header should enter organize mode that persists without a selected entry'
+  !popupJs.includes('enterSelectionMode({ groupOrganize: true })') &&
+    !popupJs.includes('startHeaderLongPress') &&
+    !popupJs.includes('startLongPress'),
+  'modeless: long-press gestures (entry + group header) should be gone'
 );
 assert.ok(
-  popupJs.includes('const startHeaderLongPress') &&
-    popupJs.includes("header.addEventListener('mousedown', startHeaderLongPress)"),
-  'group headers should support a long-press gesture to enter organize mode'
+  popupJs.includes("openButton.addEventListener('click', () => openEntry(entry)") &&
+    popupJs.includes('header.draggable = true;') &&
+    popupJs.includes('item.draggable = true;'),
+  'modeless: clicking opens, and both cards and group headers are draggable'
 );
 assert.ok(
-  popupJs.includes('state.selectedIds.size === 0 && !state.groupOrganize'),
-  'organize mode entered via a group header should not auto-exit on empty selection'
+  popupJs.includes("if (effectiveViewMode === 'grouped' && visible.length > 0)") &&
+    popupJs.includes('elements.unshift(renderCreateGroupItem())'),
+  'modeless: a Create-new-group row is always offered in grouped view'
 );

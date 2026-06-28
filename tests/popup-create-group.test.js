@@ -437,6 +437,7 @@ async function flushPromises(count = 6) {
 }
 
 async function main() {
+  // Modeless: clicking the Create-new-group row and naming it makes an empty group.
   {
     const { api, storage } = createHarness();
     const entry = ReadLaterCore.buildEntryFromTab({
@@ -444,19 +445,35 @@ async function main() {
       url: 'https://example.com/extensions'
     }, 1000);
     api.state.entries = [entry];
-    api.state.selectionMode = false;
-    api.state.selectedIds.clear();
-    api.state.pendingGroupSelectedIds = [entry.id];
 
-    const item = api.renderCreateGroupItem([entry.id]);
+    const item = api.renderCreateGroupItem();
     item.querySelector('.create-group-button').click();
     const input = item.querySelector('.create-group-input');
     input.value = 'aaa';
 
     await dispatchAndWait(input, { type: 'keydown', key: 'Enter' });
 
-    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].domain, 'aaa');
-    assert.deepStrictEqual(Array.from(storage.readLaterCustomGroups), ['aaa']);
+    assert.deepStrictEqual(Array.from(storage.readLaterCustomGroups), ['aaa'], 'naming the create-group row makes an empty custom group');
+    assert.strictEqual(api.state.entries[0].domain, 'example.com', 'creating an empty group does not move existing entries');
+  }
+
+  // Modeless: dropping an entry onto the Create-new-group row then naming it moves that entry in.
+  {
+    const { api, storage } = createHarness();
+    const entry = ReadLaterCore.buildEntryFromTab({ title: 'Doc', url: 'https://example.com/doc' }, 1000);
+    api.state.entries = [entry];
+    api.state.viewMode = 'grouped';
+    api.render();
+    const card = api.els.entriesList.querySelector('.entry-card');
+    const createItem = api.els.entriesList.querySelector('.create-group-item');
+    const dataTransfer = { effectAllowed: '', dropEffect: '', setData() {} };
+    card.dispatchEvent({ type: 'dragstart', target: card, dataTransfer });
+    const button = createItem.querySelector('.create-group-button');
+    button.dispatchEvent({ type: 'drop', target: button, dataTransfer });
+    const input = createItem.querySelector('.create-group-input');
+    input.value = 'Reading';
+    await dispatchAndWait(input, { type: 'keydown', key: 'Enter' });
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY][0].domain, 'Reading', 'dropping an entry into a new group moves it');
   }
 
   {
@@ -642,38 +659,26 @@ async function main() {
     assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed group move should not persist entries');
   }
 
+  // Modeless: a failed drop onto a group header surfaces the error and keeps the entry put.
   {
     const { api, storage } = createHarness({ setError: 'Storage write failed' });
-    const entry = ReadLaterCore.buildEntryFromTab({
-      title: 'Dragged page',
-      url: 'https://drag.example/page'
-    }, 1000);
-    api.state.entries = [entry];
-    api.state.selectionMode = true;
-    api.state.selectedIds.add(entry.id);
-    api.state.pendingGroupSelectedIds = [entry.id];
-    api.state.showCreateGroup = true;
+    const dragged = ReadLaterCore.buildEntryFromTab({ title: 'Dragged page', url: 'https://drag.example/page' }, 1000);
+    const docsA = { ...ReadLaterCore.buildEntryFromTab({ title: 'Docs A', url: 'https://docs.example/a' }, 2000), domain: 'Docs' };
+    const docsB = { ...ReadLaterCore.buildEntryFromTab({ title: 'Docs B', url: 'https://docs.example/b' }, 3000), domain: 'Docs' };
+    api.state.entries = [dragged, docsA, docsB];
+    api.state.viewMode = 'grouped';
+    api.render();
 
-    const node = api.renderDomainGroup({
-      type: 'group',
-      domain: 'Docs',
-      entries: [ReadLaterCore.buildEntryFromTab({
-        title: 'Existing docs page',
-        url: 'https://docs.example/existing'
-      }, 1000)],
-      count: 1
-    });
-    const header = node.querySelector('.domain-group-header');
-
-    await dispatchAndWait(header, { type: 'drop', target: header });
+    const card = Array.from(api.els.entriesList.querySelectorAll('.entry-card')).find(c => c.dataset.id === dragged.id);
+    const docsGroup = Array.from(api.els.entriesList.querySelectorAll('.domain-group')).find(g => g.dataset.domain === 'Docs');
+    const header = docsGroup.querySelector('.domain-group-header');
+    const dataTransfer = { effectAllowed: '', dropEffect: '', setData() {} };
+    card.dispatchEvent({ type: 'dragstart', target: card, dataTransfer });
+    await dispatchAndWait(header, { type: 'drop', target: header, dataTransfer });
 
     assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
-    assert.deepStrictEqual(api.state.entries.map(item => item.domain), ['drag.example']);
-    assert.strictEqual(api.state.selectionMode, true, 'failed drop-to-group should keep selection mode active');
-    assert.deepStrictEqual(Array.from(api.state.selectedIds), [entry.id]);
-    assert.deepStrictEqual(api.state.pendingGroupSelectedIds, [entry.id]);
-    assert.strictEqual(api.state.showCreateGroup, true);
-    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed drop-to-group should not persist entries');
+    assert.strictEqual(api.state.entries.find(e => e.id === dragged.id).domain, 'drag.example', 'failed classify keeps the entry in place');
+    assert.strictEqual(storage[ReadLaterCore.STORAGE_KEY], undefined, 'failed classify should not persist entries');
   }
 
   {
@@ -1236,7 +1241,7 @@ async function main() {
     api.state.viewMode = 'grouped';
     api.render();
 
-    assert.strictEqual(api.els.entriesList.children[0].dataset.domain, 'News');
+    assert.strictEqual(api.els.entriesList.querySelector('.domain-group').dataset.domain, 'News');
     const docsGroup = api.els.entriesList.querySelector(`[data-domain="Docs"]`);
     const pinButton = docsGroup.querySelector('.group-pin-button');
     assert.ok(pinButton, 'group headers should expose a pin affordance');
@@ -1248,8 +1253,8 @@ async function main() {
 
     assert.deepStrictEqual(Array.from(storage.readLaterPinnedGroups), ['Docs']);
     assert.strictEqual(api.state.pinnedGroups.has('Docs'), true);
-    assert.strictEqual(api.els.entriesList.children[0].dataset.domain, 'Docs', 'pinned group should render before newer unpinned groups');
-    const pinnedButton = api.els.entriesList.children[0].querySelector('.group-pin-button');
+    assert.strictEqual(api.els.entriesList.querySelector('.domain-group').dataset.domain, 'Docs', 'pinned group should render before newer unpinned groups');
+    const pinnedButton = api.els.entriesList.querySelector('.domain-group').querySelector('.group-pin-button');
     assert.strictEqual(pinnedButton.classList.contains('is-pinned'), true);
     assert.strictEqual(pinnedButton.title, 'Unpin group');
     assert.strictEqual(pinnedButton.getAttribute('aria-label'), 'Unpin group Docs');
@@ -1650,24 +1655,6 @@ async function main() {
     assert.strictEqual(storage.readLaterEntryOrder, undefined, 'failed reorder must not persist the order');
     assert.deepStrictEqual(Array.from(api.state.entryOrder), [], 'failed reorder must not mutate the in-memory order');
     assert.strictEqual(api.els.statusText.textContent, 'Storage write failed');
-  }
-
-  // Long-pressing a group header enters organize mode that persists without a selected entry.
-  {
-    const { api } = createHarness();
-    const entries = [
-      { ...ReadLaterCore.buildEntryFromTab({ title: 'A', url: 'https://docs.example/a' }, 1000), domain: 'Docs' },
-      { ...ReadLaterCore.buildEntryFromTab({ title: 'B', url: 'https://docs.example/b' }, 2000), domain: 'Docs' }
-    ];
-    api.state.entries = entries;
-    api.state.viewMode = 'grouped';
-    api.render();
-    const header = api.els.entriesList.querySelector('.domain-group-header');
-    header.dispatchEvent({ type: 'mousedown', target: header, bubbles: true });
-    assert.strictEqual(api.state.selectionMode, true, 'long-pressing a group header enters organize mode');
-    assert.strictEqual(api.state.groupOrganize, true, 'header long-press keeps organize mode open with no selected entry');
-    assert.strictEqual(api.els.searchInput.value, 'Reorder groups', 'group-organize mode shows a reorder label');
-    assert.strictEqual(api.els.clearSearchBtn.classList.contains('hidden'), false, 'group-organize mode keeps a visible exit button');
   }
 }
 
