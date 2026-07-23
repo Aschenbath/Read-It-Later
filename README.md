@@ -1,8 +1,10 @@
 <div align="center">
 
-# 📑 Read It Later
+<img src="icons/icon-128.png" width="88" height="88" alt="Read It Later icon">
 
-**一键收藏网页，稍后阅读 — 本地存储，无需账号**
+<h1>Read It Later</h1>
+
+**一键收藏网页，稍后阅读 — 搜索、分组和批量整理都留在浏览器本地**
 
 [English](#english) | [中文](#中文)
 
@@ -148,10 +150,6 @@
 
 5. **完成**！工具栏出现书签图标
 
-**Chrome Web Store 安装**（即将上线）
-
-扩展审核通过后会在此提供 Chrome Web Store 链接。
-
 ---
 
 ### 🛠️ 技术细节
@@ -220,7 +218,7 @@ read-it-later-extension/
 | `updatedAt` | `number` | 最后更新时间戳（毫秒） | `1780732800000` |
 
 **存储机制**
-- 使用 `chrome.storage.local` 存储（容量限制 5MB）
+- 使用 `chrome.storage.local` 存储；可用配额由浏览器及其版本决定
 - 数据结构：`{ readLaterItems: Entry[] }`
 - 分组状态：`{ readLaterExpandedDomains: string[] }` 保存展开的分组
 - 视图模式：`{ readLaterViewMode: 'flat' | 'grouped' }` 保存当前视图
@@ -411,10 +409,6 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 5. **Done!** Bookmark icon appears in your toolbar
 
-**Chrome Web Store** (Coming Soon)
-
-Chrome Web Store link will be provided here after extension review approval.
-
 ---
 
 ### 🛠️ Technical Details
@@ -483,7 +477,7 @@ read-it-later-extension/
 | `updatedAt` | `number` | Last update timestamp (milliseconds) | `1780732800000` |
 
 **Storage Mechanism**
-- Uses `chrome.storage.local` (5MB limit)
+- Uses `chrome.storage.local`; available quota depends on the browser and version
 - Data structure: `{ readLaterItems: Entry[] }`
 - Group state: `{ readLaterExpandedDomains: string[] }` saves expanded groups
 - View mode: `{ readLaterViewMode: 'flat' | 'grouped' }` saves current view
