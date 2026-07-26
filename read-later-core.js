@@ -305,8 +305,12 @@ function formatSavedAt(value, now = Date.now()) {
 function findEntryByUrl(entries, url) {
   const key = normalizeUrl(url);
   if (!key) return null;
-  const list = Array.isArray(entries) ? entries.map(entry => normalizeEntry(entry)) : [];
-  return list.find(entry => normalizeUrl(entry.url) === key) || null;
+  // Match on normalized URLs without normalizing the whole list — callers pass
+  // already-normalized lists and this runs on every popup render. Only the
+  // matched entry is normalized so the return shape stays identical.
+  const list = Array.isArray(entries) ? entries : [];
+  const match = list.find(entry => entry && normalizeUrl(entry.url) === key);
+  return match ? normalizeEntry(match) : null;
 }
 
 function upsertEntry(entries, entry) {

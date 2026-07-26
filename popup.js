@@ -33,6 +33,7 @@ const state = {
 
 const els = {};
 let statusTimer = null;
+let statusFadeTimer = null;
 const pendingStorageEchoes = new Map();
 const ENTRY_EXIT_ANIMATION_MS = 220;
 const GROUP_CARD_EXIT_MS = 350;
@@ -201,10 +202,15 @@ function setStatus(text, options = {}) {
   els.statusText.textContent = text || '';
   els.statusText.classList.remove('is-fading');
 
-  // Clear any existing timer
+  // Clear any existing timer, including a fade already in flight — otherwise a
+  // message set during the 300ms fade window is blanked almost immediately.
   if (statusTimer) {
     clearTimeout(statusTimer);
     statusTimer = null;
+  }
+  if (statusFadeTimer) {
+    clearTimeout(statusFadeTimer);
+    statusFadeTimer = null;
   }
 
   // Auto-clear after delay (default 3 seconds)
@@ -213,9 +219,10 @@ function setStatus(text, options = {}) {
     statusTimer = setTimeout(() => {
       // Fade out before clearing
       els.statusText.classList.add('is-fading');
-      setTimeout(() => {
+      statusFadeTimer = setTimeout(() => {
         els.statusText.textContent = '';
         els.statusText.classList.remove('is-fading');
+        statusFadeTimer = null;
       }, 300); // Match CSS transition duration
       statusTimer = null;
     }, delay);
@@ -875,7 +882,7 @@ async function toggleGroupPinned(domain) {
 }
 
 async function removeEntry(entry) {
-  const next = ReadLaterCore.deleteEntry(state.entries, entry.id);
+  let next = ReadLaterCore.deleteEntry(state.entries, entry.id);
   if (!next.changed) return;
   const wasSelected = state.selectedIds.has(entry.id);
 
@@ -894,6 +901,11 @@ async function removeEntry(entry) {
       }, ENTRY_EXIT_ANIMATION_MS);
     });
   }
+
+  // Recompute from the live list: another delete (or a synced background
+  // quick-save) may have changed state.entries during the exit animation, and
+  // persisting the pre-animation snapshot would resurrect / drop those entries.
+  next = ReadLaterCore.deleteEntry(state.entries, entry.id);
 
   try {
     await persist(next.entries);
@@ -2013,11 +2025,15 @@ function bind() {
         event.preventDefault();
         return deleteSelectedEntries().catch(reportDeleteError);
       }
-      // In normal mode, delete focused entry
+      // In normal mode, delete focused entry; keep keyboard navigation alive
+      // by restoring focus to the same list position after the re-render.
       const entry = focusedEntry();
       if (entry) {
         event.preventDefault();
-        return removeEntry(entry).catch(reportDeleteError);
+        const index = focusedEntryIndex();
+        return removeEntry(entry)
+          .then(() => focusEntry(index))
+          .catch(reportDeleteError);
       }
       return;
     }

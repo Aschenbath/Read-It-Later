@@ -242,6 +242,14 @@ assert.ok(
   'single-entry delete should preserve selection state until storage persistence succeeds'
 );
 assert.ok(
+  removeEntryBlock.indexOf('ENTRY_EXIT_ANIMATION_MS') !== -1 &&
+    removeEntryBlock.indexOf('ENTRY_EXIT_ANIMATION_MS') <
+      removeEntryBlock.lastIndexOf('next = ReadLaterCore.deleteEntry(state.entries, entry.id);') &&
+    removeEntryBlock.lastIndexOf('next = ReadLaterCore.deleteEntry(state.entries, entry.id);') <
+      removeEntryBlock.indexOf('await persist(next.entries);'),
+  'single-entry delete must recompute the deletion from live state after the exit animation so a concurrent delete or synced quick-save is not resurrected/dropped'
+);
+assert.ok(
   popupJs.includes('const ENTRY_EXIT_ANIMATION_MS = 220;') &&
     popupJs.includes('function markCardLeaving') &&
     popupJs.includes("card.style.animation = '';") &&
@@ -607,6 +615,11 @@ assert.ok(backgroundJs.includes('ReadLaterCore.STORAGE_KEY'), 'background shortc
 assert.ok(backgroundJs.includes('ReadLaterCore.normalizeEntries'), 'background shortcut should rebuild stored entries through the shared recovery helper');
 assert.ok(backgroundJs.includes('ReadLaterCore.findEntryByUrl'), 'background shortcut should detect existing entries with normalized URLs');
 assert.ok(backgroundJs.includes('ReadLaterCore.deleteEntry'), 'background shortcut should remove the normalized existing entry');
+assert.ok(
+  backgroundJs.includes('let quickSaveQueue = Promise.resolve();') &&
+    backgroundJs.includes('quickSaveQueue.then(() => handleQuickSave())'),
+  'quick-save must be serialized through a promise chain so rapid presses cannot interleave their read-modify-write pairs'
+);
 assert.ok(backgroundJs.includes('ReadLaterCore.upsertEntry'), 'background shortcut should add pages through the shared dedupe logic');
 assert.ok(!backgroundJs.includes('e.url === entry.url'), 'background shortcut must not compare raw URLs');
 assert.ok(!backgroundJs.includes('chrome.notifications.getAll'), 'notification cleanup should clear only the notification it created');

@@ -3,9 +3,21 @@
 // Import the core logic
 importScripts('read-later-core.js');
 
+// Serialize quick-save invocations: each one is a read-modify-write of the
+// entries key, so two rapid presses must not interleave their get/set pairs
+// (last write would win and silently drop the first save/removal).
+let quickSaveQueue = Promise.resolve();
+
 // Listen for command shortcuts
-chrome.commands.onCommand.addListener(async (command) => {
-  if (command === 'quick-save') {
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== 'quick-save') return;
+  const run = quickSaveQueue.then(() => handleQuickSave());
+  quickSaveQueue = run.catch(() => {});
+  return run;
+});
+
+async function handleQuickSave() {
+  {
     try {
       const storageKey = ReadLaterCore.STORAGE_KEY;
       // Get the current active tab
@@ -49,7 +61,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       );
     }
   }
-});
+}
 
 // Show a notification to the user
 function showNotification(title, message) {
